@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Редактор расписания</title>
+    <script src="/static/script.js"></script>
+    <style>
+        .slot { border: 1px solid #ccc; padding: 10px; margin: 5px; min-height: 50px; }
+        .employee { background: #eef; padding: 5px; margin: 3px; cursor: grab; }
+    </style>
+</head>
+<body>
+<h2>Редактор смен</h2>
+{% for shift in shifts %}
+  <div class="slot" data-shift-id="{{ shift.id }}">
+    <b>{{ shift.date }} — {{ shift.location }}:</b><br/>
+    {% for emp in shift.employees %}
+      <div class="employee" data-emp-id="{{ emp.id }}">{{ emp.full_name }}</div>
+    {% endfor %}
+  </div>
+{% endfor %}
+</body>
+</html>

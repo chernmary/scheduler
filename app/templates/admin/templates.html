@@ -1,0 +1,43 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Управление шаблонами</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: auto; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .form-block { margin-top: 20px; background: #f9f9f9; padding: 10px; border-radius: 6px; }
+        input, select { padding: 6px; margin: 5px; }
+        button { padding: 6px 12px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h2>📋 Шаблоны расписаний</h2>
+
+    <table>
+        <tr><th>Название</th><th>Дата создания</th><th>Действия</th></tr>
+        {% for template in templates %}
+        <tr>
+            <td>{{ template.name }}</td>
+            <td>{{ template.created_at.strftime('%d.%m.%Y') }}</td>
+            <td>
+                <a href="/admin/template/{{ template.id }}/edit">Редактировать</a> |
+                <a href="/admin/template/{{ template.id }}/delete" onclick="return confirm('Удалить шаблон?')">Удалить</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <div class="form-block">
+        <h3>➕ Создать новый шаблон</h3>
+        <form method="post" action="/admin/template/create">
+            <label>Название шаблона: <input type="text" name="name" required></label><br>
+            <label>Описание (необязательно):<br>
+            <textarea name="description" rows="3" cols="60"></textarea></label><br>
+            <button type="submit">Создать шаблон</button>
+        </form>
+    </div>
+</body>
+</html>

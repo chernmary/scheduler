@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Редактирование шаблона</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .day-column { float: left; width: 180px; margin-right: 10px; background: #f0f0f0; padding: 10px; border-radius: 6px; }
+        .location-box { margin-bottom: 15px; padding: 5px; background: #fff; border: 1px solid #ccc; }
+        .location-box h4 { margin: 0 0 5px 0; font-size: 14px; }
+        .drop-zone { min-height: 40px; border: 1px dashed #aaa; padding: 4px; }
+        .employee { background: #cce; margin: 3px 0; padding: 4px; cursor: grab; border-radius: 4px; }
+        .clear { clear: both; }
+        button { margin-top: 20px; padding: 6px 12px; }
+    </style>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll(".employee").forEach(emp => {
+                emp.draggable = true;
+                emp.addEventListener("dragstart", e => {
+                    e.dataTransfer.setData("emp-id", emp.dataset.empId);
+                });
+            });
+
+            document.querySelectorAll(".drop-zone").forEach(zone => {
+                zone.addEventListener("dragover", e => e.preventDefault());
+                zone.addEventListener("drop", e => {
+                    e.preventDefault();
+                    const empId = e.dataTransfer.getData("emp-id");
+                    fetch("/admin/template/{{ template.id }}/assign", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            day: zone.dataset.day,
+                            location: zone.dataset.location,
+                            employee_id: empId
+                        })
+                    }).then(() => location.reload());
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+<h2>Редактирование шаблона: {{ template.name }}</h2>
+<p><a href="/admin/templates">← Назад к списку</a></p>
+
+<div style="margin-bottom: 20px;">
+    {% for emp in employees %}
+        <div class="employee" draggable="true" data-emp-id="{{ emp.id }}">{{ emp.full_name }}</div>
+    {% endfor %}
+</div>
+
+<div style="overflow-x: auto;">
+{% for day in days %}
+    <div class="day-column">
+        <strong>{{ day }}</strong>
+        {% for loc in locations %}
+            <div class="location-box">
+                <h4>{{ loc.name }}</h4>
+                <div class="drop-zone" data-day="{{ day }}" data-location="{{ loc.name }}">
+                    {% for entry in assignments[day][loc.name] %}
+                        <div class="employee" draggable="true" data-emp-id="{{ entry.id }}">{{ entry.full_name }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endfor %}
+</div>
+
+<div class="clear"></div>
+
+<form method="post" action="/admin/template/{{ template.id }}/save">
+    <button type="submit">💾 Сохранить шаблон</button>
+</form>
+
+<form method="post" action="/admin/template/{{ template.id }}/copy" style="display:inline;">
+    <button type="submit">📋 Копировать шаблон</button>
+</form>
+
+<form method="post" action="/admin/template/{{ template.id }}/generate" style="display:inline;">
+    <button type="submit">📄 Создать график из шаблона</button>
+</form>
+
+    <button type="submit">💾 Сохранить шаблон</button>
+</form>
+</body>
+</html>
