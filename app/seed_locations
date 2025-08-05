@@ -1,0 +1,29 @@
+from app.database import SessionLocal, init_db
+from app.models import Location
+
+def seed_locations():
+    locations = [
+        ("Москвариум 1", 1),
+        ("Москвариум 0", 2),
+        ("Мастер классы", 3),
+        ("Прекрасный помогатор", 4),
+        ("Мультпарк", 5),
+        ("Авиапарк", 6),
+        ("Москвариум 3", 7),
+        ("Луномосик", 8),
+    ]
+
+    db = SessionLocal()
+    try:
+        for name, order in locations:
+            exists = db.query(Location).filter_by(name=name).first()
+            if not exists:
+                db.add(Location(name=name, order=order))
+        db.commit()
+        print("✅ Локации успешно добавлены!")
+    finally:
+        db.close()
+
+if __name__ == "__main__":
+    init_db()
+    seed_locations()
