@@ -1,3 +1,7 @@
+from sqlalchemy import Column, Integer, String, Date, Text
+from datetime import date
+from app.database import Base
+
 # ДОБАВИТЬ В СУЩЕСТВУЮЩИЙ models.py
 
 class Log(Base):
