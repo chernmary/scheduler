@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, Date, ForeignKey, Text
 from sqlalchemy.orm import relationship, declarative_base
 
-Base = declarative_base()
+from app.db_base import Base 
 
 class Location(Base):
     __tablename__ = "locations"
