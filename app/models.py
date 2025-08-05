@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship, declarative_base
 Base = declarative_base()
 
 class Location(Base):
-    _tablename_ = "locations"
+    __tablename__ = "locations"
 
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)
@@ -14,7 +14,7 @@ class Location(Base):
         return f"<Location(name={self.name})>"
 
 class Employee(Base):
-    _tablename_ = "employees"
+    __tablename__ = "employees"
 
     id = Column(Integer, primary_key=True)
     full_name = Column(String, nullable=False)
@@ -33,7 +33,7 @@ class Employee(Base):
         return f"<Employee(name={self.full_name})>"
 
 class EmployeeSetting(Base):
-    _tablename_ = "employee_settings"
+    __tablename__ = "employee_settings"
 
     id = Column(Integer, primary_key=True)
     employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
