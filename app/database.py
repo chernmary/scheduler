@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.models import Base 
+from app.db_base import Base 
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./scheduler.db"
 
