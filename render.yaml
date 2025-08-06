@@ -3,6 +3,7 @@ services:
     name: scheduler
     env: python
     plan: free
-    buildCommand: ""
-    startCommand: python main.py
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
     rootDir: .
+
