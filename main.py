@@ -10,6 +10,11 @@ from app.seed_locations import seed_locations
 
 seed_locations()
 
+from app.seed_employees import seed_employees
+
+seed_employees()
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
