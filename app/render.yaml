@@ -3,6 +3,10 @@ services:
     name: scheduler
     env: python
     plan: free
-    buildCommand: ""
+    buildCommand: |
+      python app/seed_employees
+      python app/seed_locations
+      python app/seed_employee_settings
     startCommand: python main.py
     rootDir: .
+
