@@ -19,6 +19,7 @@ class Employee(Base):
 
     shifts = relationship("Shift", back_populates="employee", cascade="all, delete")
     settings = relationship("EmployeeSetting", back_populates="employee", cascade="all, delete")
+    assignments = relationship("Assignment", back_populates="employee", cascade="all, delete")
 
 # 📍 Локация
 class Location(Base):
@@ -29,8 +30,8 @@ class Location(Base):
     order = Column(Integer, nullable=False)  # для отображения в нужном порядке
     zone = Column(String, nullable=False)
 
-
     shifts = relationship("Shift", back_populates="location", cascade="all, delete")
+    assignments = relationship("Assignment", back_populates="location", cascade="all, delete")
 
 # 📅 Смена
 class Shift(Base):
@@ -61,12 +62,15 @@ class EmployeeSetting(Base):
 
     employee = relationship("Employee", back_populates="settings")
     location = relationship("Location")
-    
-class Assignment(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    shift_id = db.Column(db.Integer, db.ForeignKey('shift.id'), nullable=False)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
 
-    shift = db.relationship('Shift', backref=db.backref('assignments', lazy=True))
-    employee = db.relationship('Employee', backref=db.backref('assignments', lazy=True))
+# 🧾 Назначения сотрудников на смену (архив)
+class Assignment(Base):
+    __tablename__ = "assignments"
 
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
+    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    date = Column(Date, nullable=False)
+
+    employee = relationship("Employee", back_populates="assignments")
+    location = relationship("Location", back_populates="assignments")
