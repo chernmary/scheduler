@@ -7,15 +7,16 @@ def seed_locations():
     session = SessionLocal()
 
     locations_data = [
-        {"name": "Москвариум 1", "order": 1},
-        {"name": "Москвариум 0", "order": 2},
-        {"name": "Мастер классы", "order": 3},
-        {"name": "Прекрасный помогатор", "order": 4},
-        {"name": "Мультпарк", "order": 5},
-        {"name": "Авиапарк", "order": 6},
-        {"name": "Москвариум 3", "order": 7},
-        {"name": "Луномосик", "order": 8},
-    ]
+    {"name": "Москвариум 1", "order": 1, "zone": "main_building"},
+    {"name": "Москвариум 0", "order": 2, "zone": "main_building"},
+    {"name": "Мастер классы", "order": 3, "zone": "main_building"},
+    {"name": "Прекрасный помогатор", "order": 4, "zone": "main_building"},
+    {"name": "Мультпарк", "order": 5, "zone": "multpark"},
+    {"name": "Авиапарк", "order": 6, "zone": "aviapark"},
+    {"name": "Москвариум 3", "order": 7, "zone": "main_building"},
+    {"name": "Луномосик", "order": 8, "zone": "lunosik"},
+]
+
 
     for loc in locations_data:
         existing = session.query(Location).filter_by(name=loc["name"]).first()
