@@ -1,29 +1,33 @@
-from app.database import SessionLocal, init_db
-from app.models import Location
+from app.database.models import Location
+from app.database.database import SessionLocal
+from sqlalchemy.exc import IntegrityError
+
 
 def seed_locations():
-    locations = [
-        ("Москвариум 1", 1),
-        ("Москвариум 0", 2),
-        ("Мастер классы", 3),
-        ("Прекрасный помогатор", 4),
-        ("Мультпарк", 5),
-        ("Авиапарк", 6),
-        ("Москвариум 3", 7),
-        ("Луномосик", 8),
+    session = SessionLocal()
+
+    locations_data = [
+        {"name": "Москвариум 1", "order": 1},
+        {"name": "Москвариум 0", "order": 2},
+        {"name": "Мастер классы", "order": 3},
+        {"name": "Прекрасный помогатор", "order": 4},
+        {"name": "Мультпарк", "order": 5},
+        {"name": "Авиапарк", "order": 6},
+        {"name": "Москвариум 3", "order": 7},
+        {"name": "Луномосик", "order": 8},
     ]
 
-    db = SessionLocal()
-    try:
-        for name, order in locations:
-            exists = db.query(Location).filter_by(name=name).first()
-            if not exists:
-                db.add(Location(name=name, order=order))
-        db.commit()
-        print("✅ Локации успешно добавлены!")
-    finally:
-        db.close()
+    for loc in locations_data:
+        existing = session.query(Location).filter_by(name=loc["name"]).first()
+        if not existing:
+            session.add(Location(**loc))
 
-if __name__ == "__main__":
-    init_db()
-    seed_locations()
+    try:
+        session.commit()
+        print("Локации успешно добавлены!")
+    except IntegrityError:
+        session.rollback()
+        print("Ошибка при добавлении локаций.")
+    finally:
+        session.close()
+
