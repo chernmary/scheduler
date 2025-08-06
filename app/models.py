@@ -61,4 +61,12 @@ class EmployeeSetting(Base):
 
     employee = relationship("Employee", back_populates="settings")
     location = relationship("Location")
+    
+class Assignment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    shift_id = db.Column(db.Integer, db.ForeignKey('shift.id'), nullable=False)
+    employee_id = db.Column(db.Integer, db.ForeignKey('employee.id'), nullable=False)
+
+    shift = db.relationship('Shift', backref=db.backref('assignments', lazy=True))
+    employee = db.relationship('Employee', backref=db.backref('assignments', lazy=True))
 
