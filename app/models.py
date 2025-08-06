@@ -27,6 +27,8 @@ class Location(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
     order = Column(Integer, nullable=False)  # для отображения в нужном порядке
+    zone = Column(String, nullable=False)
+
 
     shifts = relationship("Shift", back_populates="location", cascade="all, delete")
 
