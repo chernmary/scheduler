@@ -2,7 +2,8 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import admin, public
+from app.routes import admin, public, schedule
+
 from app.database import init_db
 app = FastAPI()
 init_db()
