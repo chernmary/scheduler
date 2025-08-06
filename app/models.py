@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Date, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
-from app.dp_base import Base  # база теперь импортируется отсюда
+from app.db_base import Base  # база теперь импортируется отсюда
 
 # 🧍 Сотрудник
 class Employee(Base):
