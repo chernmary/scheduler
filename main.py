@@ -6,6 +6,10 @@ from app.routes import admin, public
 from app.database import init_db
 app = FastAPI()
 init_db()
+from app.seed_locations import seed_locations
+
+seed_locations()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
