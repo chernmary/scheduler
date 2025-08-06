@@ -6,3 +6,4 @@ python-multipart
 passlib[bcrypt]
 pydantic
 python-dotenv
+alembic 
