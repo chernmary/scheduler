@@ -1,13 +1,107 @@
+/* Сброс */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-# Заглушка под Telegram-бота
-import os
-import requests
+/* Базовая типографика и фон */
+body {
+  font-family: "Arial", sans-serif;
+  background: #f5f7fa;
+  color: #333;
+  line-height: 1.4;
+}
 
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-BASE_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
+/* Шапка */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+}
 
-def notify_user(chat_id, message):
-    requests.post(f"{BASE_URL}/sendMessage", json={"chat_id": chat_id, "text": message})
+.nav-tabs a {
+  margin-left: 1.5rem;
+  text-decoration: none;
+  color: #555;
+  font-weight: bold;
+}
 
-# Пример использования:
-# notify_user(123456789, "Ваша смена назначена на завтра.")
+.nav-tabs a.active {
+  color: #008cba;
+}
+
+/* Контейнер */
+.container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+/* Заголовок */
+.title {
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  color: #008cba;
+}
+
+/* Обёртка таблицы для скролла */
+.table-wrapper {
+  overflow-x: auto;
+  background: #fff;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Таблица */
+.schedule-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.schedule-table th,
+.schedule-table td {
+  padding: 0.75rem 1rem;
+  text-align: center;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.schedule-table thead th {
+  background: #f0f4f8;
+  font-weight: normal;
+}
+
+.location-cell {
+  text-align: left;
+  font-weight: bold;
+  background: #fafafa;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+/* Кнопка */
+.button-row {
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+.btn-generate {
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  background: #008cba;
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-generate:hover {
+  background: #006f98;
+}
