@@ -3,7 +3,7 @@
 from datetime import date, datetime, timedelta
 from collections import defaultdict
 from sqlalchemy.orm import Session
-from app.database.database import SessionLocal, init_db
+from app.database import SessionLocal, init_db
 from app.database.models import Employee, EmployeeSetting, Location, Shift
 
 # 1) Вспомогалка: русские названия дней недели
