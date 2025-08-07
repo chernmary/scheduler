@@ -1,5 +1,5 @@
-from app.database.models import Location
-from app.database.database import SessionLocal
+from app.models import Location
+from app.database import SessionLocal
 from sqlalchemy.exc import IntegrityError
 
 
