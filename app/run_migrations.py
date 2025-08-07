@@ -1,17 +1,21 @@
 import os
 from alembic.config import Config
 from alembic import command
+from sqlalchemy import create_engine
 
 def run_migrations():
-    # Указываем путь к alembic.ini (он лежит в папке migrations)
+    # Абсолютный путь к БД
+    db_path = os.path.join(os.getcwd(), "scheduler.db")
+    db_url = f"sqlite:///{db_path}"
+
+    # Если базы нет — создадим пустую
+    if not os.path.exists(db_path):
+        engine = create_engine(db_url, connect_args={"check_same_thread": False})
+        engine.connect().close()  # просто создаём файл
+
+    # Настраиваем Alembic
     alembic_cfg = Config(os.path.join("migrations", "alembic.ini"))
-
-    # Получаем абсолютный путь к базе данных scheduler.db
-    project_root = os.getcwd()  # Render всегда запускает из корня проекта
-    db_path = os.path.join(project_root, "scheduler.db")
-
-    # Вставляем в конфигурацию путь к базе
-    alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+    alembic_cfg.set_main_option("sqlalchemy.url", db_url)
 
     # Запускаем миграции
     command.upgrade(alembic_cfg, "head")
