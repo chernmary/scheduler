@@ -18,4 +18,8 @@ async def show_schedule(request: Request):
 
 @router.post("/schedule")
 async def regenerate_schedule(request: Request):
-    # считаем ближай
+    # дата ближайшего понедельника
+    today = date.today()
+    start = today - timedelta(days=today.weekday()) + timedelta(days=7 if today.weekday() > 0 else 0)
+    generate_schedule(start_date=start)
+    return RedirectResponse(url="/schedule", status_code=303)
