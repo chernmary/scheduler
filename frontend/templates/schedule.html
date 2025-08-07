@@ -1,70 +1,54 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>График смен</title>
-    <style>
-        body { font-family: sans-serif; }
-        .grid { display: grid; grid-template-columns: repeat(15, 1fr); gap: 5px; }
-        .cell { border: 1px solid #ccc; padding: 10px; min-height: 60px; background: #f9f9f9; }
-        .employee { background: #def; margin: 2px; padding: 5px; cursor: move; }
-        .droppable { background: #eee; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Расписание</title>
+  <link rel="stylesheet" href="/static/css/schedule.css">
 </head>
 <body>
-    <h1>График смен</h1>
-    <div id="schedule" class="grid"></div>
-    <button onclick="exportExcel()">📤 Экспорт в Excel</button>
+  <header class="topbar">
+    <div class="user-info">
+      <!-- здесь можно аватарку -->
+      <span>Привет, Администратор</span>
+    </div>
+    <nav class="nav-tabs">
+      <a href="/schedule" class="active">Расписание</a>
+      <a href="/employees">Сотрудники</a>
+      <a href="/settings">Настройки</a>
+    </nav>
+  </header>
 
-<script>
-const employees = ["Иванов", "Петров", "Сидоров"];
-const locations = ["Зал", "Кухня", "Бар"];
-const days = Array.from({length: 14}, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    return d.toLocaleDateString("ru-RU", { day: '2-digit', month: '2-digit', weekday: 'short' });
-});
+  <main class="container">
+    <h1 class="title">Двухнедельное расписание</h1>
 
-const container = document.getElementById("schedule");
-container.innerHTML = "<div></div>" + days.map(d => "<div><b>" + d + "</b></div>").join("");
+    <div class="table-wrapper">
+      <table class="schedule-table">
+        <thead>
+          <tr>
+            <th>Локация</th>
+            {% for dt in dates %}
+            <th>{{ dt }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for loc, row in schedule.items() %}
+          <tr>
+            <td class="location-cell">{{ loc.name }}</td>
+            {% for emp in row %}
+            <td class="employee-cell">{{ emp.full_name }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
 
-for (const loc of locations) {
-    container.innerHTML += "<div><b>" + loc + "</b></div>";
-    for (let i = 0; i < 14; i++) {
-        const cell = document.createElement("div");
-        cell.className = "cell droppable";
-        cell.ondrop = drop;
-        cell.ondragover = e => e.preventDefault();
-        container.appendChild(cell);
-    }
-}
-
-for (const emp of employees) {
-    const eDiv = document.createElement("div");
-    eDiv.textContent = emp;
-    eDiv.className = "employee";
-    eDiv.draggable = true;
-    eDiv.ondragstart = e => e.dataTransfer.setData("text/plain", emp);
-    document.body.appendChild(eDiv);
-}
-
-function drop(e) {
-    const data = e.dataTransfer.getData("text");
-    const span = document.createElement("div");
-    span.className = "employee";
-    span.textContent = data;
-    e.target.appendChild(span);
-}
-
-function exportExcel() {
-    fetch("/export-excel").then(r => r.blob()).then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "schedule.xlsx";
-        a.click();
-    });
-}
-</script>
+    <div class="button-row">
+      <form action="/schedule" method="get">
+        <button class="btn-generate" type="submit">Сгенерировать расписание</button>
+      </form>
+    </div>
+  </main>
 </body>
 </html>
