@@ -29,4 +29,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(admin.router, prefix="/admin")
 app.include_router(public.router)
 app.include_router(schedule.router)
+from app.run_migrations import run_migrations
+run_migrations()
+
 
