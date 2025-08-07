@@ -1,5 +1,5 @@
-from app.database.database import SessionLocal
-from app.database.models import Employee, EmployeeSetting
+from app.database import SessionLocal
+from app.models import Employee, EmployeeSetting
 
 def seed_employee_settings():
     db = SessionLocal()
