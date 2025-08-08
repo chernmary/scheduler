@@ -4,22 +4,26 @@ from fastapi.templating import Jinja2Templates
 from app.scheduler.generator import generate_schedule
 from datetime import date, timedelta
 
+from app.database import SessionLocal
+from app.models import Shift, Location  # ✅ Добавлен импорт Location
+
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+
+# ✅ Добавлена функция форматирования дат (раньше была неизвестна)
+def format_day(d: date) -> str:
+    days = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+    return d.strftime("%d.%m") + " " + days[d.weekday()]
 
 
 @router.get("/schedule", response_class=HTMLResponse)
 async def show_schedule(request: Request):
-    from app.database import SessionLocal
-    from app.models import Shift
-
     session = SessionLocal()
     try:
         start_date = date(2025, 8, 18)
         existing_shifts = session.query(Shift).filter(Shift.date >= start_date).first()
 
         if not existing_shifts:
-            from app.scheduler.generator import generate_schedule
             generate_schedule(start=start_date)
 
         # Загружаем график из базы
@@ -34,7 +38,7 @@ async def show_schedule(request: Request):
             schedule[loc.name] = []
             for d in dates:
                 shift = next((s for s in shifts if s.location_id == loc.id and s.date == d), None)
-                schedule[loc.name].append(shift.employee.full_name if shift else "")
+                schedule[loc.name].append(shift.employee.full_name if shift and shift.employee else "")
 
         return templates.TemplateResponse("schedule.html", {
             "request": request,
@@ -47,7 +51,6 @@ async def show_schedule(request: Request):
 
 @router.post("/schedule")
 async def regenerate_schedule(request: Request):
-    # дата ближайшего понедельника
     today = date.today()
     start = today - timedelta(days=today.weekday()) + timedelta(days=7 if today.weekday() > 0 else 0)
     generate_schedule(start_date=start)
