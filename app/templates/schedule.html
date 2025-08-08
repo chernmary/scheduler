@@ -2,103 +2,107 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>График смен</title>
+    <title>График сотрудников</title>
     <style>
         body {
-            font-family: "Segoe UI", sans-serif;
-            background-color: #f7f7f7;
-            margin: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            color: #333;
         }
         h1 {
             text-align: center;
-            color: #444;
-        }
-        form {
-            text-align: center;
-            margin-top: 10px;
-            margin-bottom: 30px;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #45a049;
+            margin: 20px 0;
         }
         table {
             border-collapse: collapse;
-            width: 100%;
-            background-color: #fff;
+            width: 95%;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
         }
         th, td {
-            border: 1px solid #ccc;
-            padding: 6px;
+            border: 1px solid #ddd;
+            padding: 8px;
             text-align: center;
         }
         th {
             background-color: #f0f0f0;
-        }
-        td {
-            font-size: 14px;
-        }
-        .location {
-            text-align: left;
             font-weight: bold;
-            background-color: #fefefe;
         }
         select {
-            width: 100%;
             padding: 4px;
-            border: 1px solid #ccc;
             border-radius: 4px;
-            font-size: 13px;
+            border: 1px solid #ccc;
+        }
+        .button-container {
+            text-align: center;
+            margin: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #45a049;
         }
     </style>
 </head>
 <body>
-    <h1>График смен</h1>
-
-    <form method="post" action="/schedule">
-        <button type="submit">🔄 Сгенерировать график</button>
-    </form>
+    <h1>График сотрудников</h1>
 
     <table>
         <thead>
             <tr>
                 <th>Локация</th>
-                {% for date in dates %}
-                    <th>{{ date }}</th>
+                {% for date_str in dates %}
+                    <th>{{ date_str }}</th>
                 {% endfor %}
             </tr>
         </thead>
         <tbody>
-            {% for loc_name, row in schedule.items() %}
+            {% for loc_name, row in schedule_data.items() %}
                 <tr>
-                    <td class="location">{{ loc_name }}</td>
-                    {% for idx, emp_name in enumerate(row) %}
+                    <td>{{ loc_name }}</td>
+                    {% for emp_name in row %}
                         <td>
-                            <form method="post" action="/schedule/update">
-                                <input type="hidden" name="date_str" value="{{ raw_dates[idx] }}">
-                                <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
-                                <select name="employee_id" onchange="this.form.submit()">
-                                    <option value="">-- пусто --</option>
-                                    {% for emp in employees %}
-                                        <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
-                                            {{ emp.full_name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </form>
+                            {% if is_admin %}
+                                <form method="post" action="/schedule/update">
+                                    <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
+                                    <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
+                                    <select name="employee_id" onchange="this.form.submit()">
+                                        <option value="">-- пусто --</option>
+                                        {% for emp in employees %}
+                                            <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
+                                                {{ emp.full_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            {% else %}
+                                {{ emp_name }}
+                            {% endif %}
                         </td>
                     {% endfor %}
                 </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    {% if is_admin %}
+    <div class="button-container">
+        <form method="post" action="/schedule/generate">
+            <button type="submit">Сгенерировать график</button>
+        </form>
+    </div>
+    {% endif %}
 </body>
 </html>
