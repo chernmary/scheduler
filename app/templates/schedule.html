@@ -37,7 +37,7 @@
         }
         th, td {
             border: 1px solid #ccc;
-            padding: 12px;
+            padding: 6px;
             text-align: center;
         }
         th {
@@ -46,13 +46,17 @@
         td {
             font-size: 14px;
         }
-        tr:hover {
-            background-color: #f9f9f9;
-        }
         .location {
             text-align: left;
             font-weight: bold;
             background-color: #fefefe;
+        }
+        select {
+            width: 100%;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
         }
     </style>
 </head>
@@ -73,11 +77,24 @@
             </tr>
         </thead>
         <tbody>
-            {% for location in schedule %}
+            {% for loc_name, row in schedule.items() %}
                 <tr>
-                    <td class="location">{{ location }}</td>
-                    {% for employee in schedule[location] %}
-                        <td>{{ employee or "" }}</td>
+                    <td class="location">{{ loc_name }}</td>
+                    {% for idx, emp_name in enumerate(row) %}
+                        <td>
+                            <form method="post" action="/schedule/update">
+                                <input type="hidden" name="date_str" value="{{ raw_dates[idx] }}">
+                                <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
+                                <select name="employee_id" onchange="this.form.submit()">
+                                    <option value="">-- пусто --</option>
+                                    {% for emp in employees %}
+                                        <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
+                                            {{ emp.full_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </td>
                     {% endfor %}
                 </tr>
             {% endfor %}
