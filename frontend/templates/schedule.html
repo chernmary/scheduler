@@ -1,54 +1,104 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Расписание</title>
-  <link rel="stylesheet" href="/static/css/schedule.css">
+    <meta charset="UTF-8">
+    <title>График сотрудников</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            margin: 20px 0;
+        }
+        table {
+            border-collapse: collapse;
+            width: 95%;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        select {
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .button-container {
+            text-align: center;
+            margin: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="user-info">
-      <!-- здесь можно аватарку -->
-      <span>Привет, Администратор</span>
-    </div>
-    <nav class="nav-tabs">
-      <a href="/schedule" class="active">Расписание</a>
-      <a href="/employees">Сотрудники</a>
-      <a href="/settings">Настройки</a>
-    </nav>
-  </header>
+    <h1>График сотрудников</h1>
 
-  <main class="container">
-    <h1 class="title">Двухнедельное расписание</h1>
-
-    <div class="table-wrapper">
-      <table class="schedule-table">
+    <table>
         <thead>
-          <tr>
-            <th>Локация</th>
-            {% for dt in dates %}
-            <th>{{ dt }}</th>
-            {% endfor %}
-          </tr>
+            <tr>
+                <th>Локация</th>
+                {% for date_str in dates %}
+                    <th>{{ date_str }}</th>
+                {% endfor %}
+            </tr>
         </thead>
         <tbody>
-          {% for loc, row in schedule.items() %}
-          <tr>
-            <td class="location-cell">{{ loc.name }}</td>
-            {% for emp in row %}
-            <td class="employee-cell">{{ emp.full_name }}</td>
+            {% for loc_name, row in schedule_data.items() %}
+                <tr>
+                    <td>{{ loc_name }}</td>
+                    {% for emp_name in row %}
+                        <td>
+                            <form method="post" action="/schedule/update">
+                                <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
+                                <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
+                                <select name="employee_id" onchange="this.form.submit()">
+                                    <option value="">-- пусто --</option>
+                                    {% for emp in employees %}
+                                        <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
+                                            {{ emp.full_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </td>
+                    {% endfor %}
+                </tr>
             {% endfor %}
-          </tr>
-          {% endfor %}
         </tbody>
-      </table>
-    </div>
+    </table>
 
-    <div class="button-row">
-      <form action="/schedule" method="get">
-        <button class="btn-generate" type="submit">Сгенерировать расписание</button>
-      </form>
+    {% if is_admin %}
+    <div class="button-container">
+        <form method="post" action="/schedule/generate">
+            <button type="submit">Сгенерировать график</button>
+        </form>
     </div>
-  </main>
+    {% endif %}
 </body>
 </html>
