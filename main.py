@@ -26,6 +26,17 @@ except Exception as e:
 # Запуск приложения
 app = FastAPI()
 
+import traceback
+from fastapi.responses import PlainTextResponse
+from fastapi.requests import Request
+
+# Ловим все необработанные ошибки и выводим их в логи
+@app.exception_handler(Exception)
+async def debug_exception_handler(request: Request, exc: Exception):
+    tb_str = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    print("\n=== ОШИБКА ===\n", tb_str, "\n=== КОНЕЦ ОШИБКИ ===\n", flush=True)
+    return PlainTextResponse(str(exc), status_code=500)
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
