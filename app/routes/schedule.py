@@ -32,7 +32,7 @@ async def show_schedule(request: Request):
         # Проверяем, есть ли смены с этой даты
         existing_shifts = session.query(Shift).filter(Shift.date >= start_date).first()
         if not existing_shifts:
-            generate_schedule(start_date=start_date)
+            generate_schedule(start=start_date)
 
         # Загружаем график
         shifts = session.query(Shift).all()
@@ -68,5 +68,5 @@ async def show_schedule(request: Request):
 @router.post("/schedule")
 async def regenerate_schedule(request: Request):
     start = get_next_monday()
-    generate_schedule(start_date=start)
+    generate_schedule(start=start)
     return RedirectResponse(url="/schedule", status_code=303)
