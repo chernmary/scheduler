@@ -11,3 +11,77 @@
         }
         h1 {
             text-align: center;
+            color: #444;
+        }
+        form {
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background-color: #fff;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 12px;
+            text-align: center;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+        td {
+            font-size: 14px;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        .location {
+            text-align: left;
+            font-weight: bold;
+            background-color: #fefefe;
+        }
+    </style>
+</head>
+<body>
+    <h1>График смен</h1>
+
+    <form method="post" action="/schedule">
+        <button type="submit">🔄 Сгенерировать график</button>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Локация</th>
+                {% for date in dates %}
+                    <th>{{ date }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for location in schedule %}
+                <tr>
+                    <td class="location">{{ location }}</td>
+                    {% for employee in schedule[location] %}
+                        <td>{{ employee or "" }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
