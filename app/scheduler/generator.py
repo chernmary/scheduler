@@ -6,22 +6,18 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal, init_db
 from app.models import Employee, EmployeeSetting, Location, Shift
 
-# 1) Вспомогалка: русские названия дней недели
 WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 
 def format_day(d: date) -> str:
-    """ dd.mm Дд """
     return f"{d.day:02d}.{d.month:02d} {WEEKDAYS[d.weekday()]}"
 
 def load_data(session: Session):
-    """Загружаем из базы всех сотрудников, их настройки и локации"""
     employees = session.query(Employee).filter_by(is_helper=False, on_sick_leave=False).all()
     settings = {s.employee_id: s for s in session.query(EmployeeSetting).all()}
     locations = session.query(Location).order_by(Location.order).all()
     return employees, settings, locations
 
 def can_work(es: EmployeeSetting, loc_id: int, day: date) -> bool:
-    """Проверяем, разрешено ли сотруднику es работать на location_id в день day"""
     if hasattr(es, "unavailable_days") and es.unavailable_days:
         if day.isoformat() in es.unavailable_days.split(","):
             return False
@@ -31,7 +27,6 @@ def can_work(es: EmployeeSetting, loc_id: int, day: date) -> bool:
     return True
 
 def generate_schedule(start: date, weeks: int = 2):
-    """Генерация расписания, сохранение в БД и возврат результата"""
     init_db()
     session = SessionLocal()
     try:
@@ -49,7 +44,6 @@ def generate_schedule(start: date, weeks: int = 2):
             week_index = offset // 7
 
             for loc in locations:
-                candidates = []
                 for emp in employees:
                     es = settings_map.get(emp.id)
                     if not es:
@@ -62,9 +56,13 @@ def generate_schedule(start: date, weeks: int = 2):
                         continue
                     if shifts_count_2weeks[emp.id] >= max_2w:
                         continue
-    
-    # Здесь закончился цикл — теперь закроем сессию
-    return schedule, dates
+                    # назначаем сотрудника на смену (заполняем schedule)
+                    schedule[loc.name].append(emp.full_name)
+                    shifts_count_week[(emp.id, week_index)] += 1
+                    shifts_count_2weeks[emp.id] += 1
+                    break  # переходим к следующей локации
 
-finally:
-    session.close()
+        return schedule, dates
+
+    finally:
+        session.close()
