@@ -5,16 +5,23 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.run_migrations import run_migrations
-from app.database import init_db
+from app.database import init_db, engine          # ⬅️ добавили engine
 from app.seed_locations import seed_locations
 from app.seed_employees import seed_employees
 from app.routes import admin, public, schedule
+from app.models import ArchivedShift              # ⬅️ импорт модели архива
 
 # Миграции и сиды
 run_migrations()
 init_db()
 seed_locations()
 seed_employees()
+
+# ⬅️ создадим таблицу архива, если её ещё нет
+try:
+    ArchivedShift.__table__.create(bind=engine, checkfirst=True)
+except Exception as e:
+    print("ArchivedShift create skipped:", e)
 
 # Запуск приложения
 app = FastAPI()
