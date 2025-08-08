@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Вход администратора</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#f7f7f7}
+    .box{max-width:360px;margin:80px auto;background:#fff;padding:24px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+    h1{margin:0 0 16px;font-size:20px}
+    label{display:block;margin:10px 0 4px}
+    input{width:100%;padding:10px;border:1px solid #ccc;border-radius:6px}
+    button{width:100%;margin-top:16px;padding:10px;border:none;border-radius:6px;background:#4CAF50;color:#fff;cursor:pointer}
+    button:hover{background:#45a049}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Вход администратора</h1>
+    <form method="post" action="/login">
+      <label>Логин</label>
+      <input name="username" required>
+      <label>Пароль</label>
+      <input type="password" name="password" required>
+      <button type="submit">Войти</button>
+    </form>
+  </div>
+</body>
+</html>
