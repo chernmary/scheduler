@@ -4,6 +4,9 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
+    startCommand: >
+      bash -c "
+        python run_migrations.py &&
+        uvicorn app.main:app --host 0.0.0.0 --port 10000
+      "
     rootDir: .
-
