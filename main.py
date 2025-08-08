@@ -1,3 +1,6 @@
+from app.run_migrations import run_migrations
+
+run_migrations()
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
