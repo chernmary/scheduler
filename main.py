@@ -5,11 +5,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.run_migrations import run_migrations
-from app.database import init_db, engine          # ⬅️ добавили engine
+from app.database import init_db, engine
 from app.seed_locations import seed_locations
 from app.seed_employees import seed_employees
 from app.routes import admin, public, schedule
-from app.models import ArchivedShift              # ⬅️ импорт модели архива
+from app.models import ArchivedShift
 
 # Миграции и сиды
 run_migrations()
@@ -17,7 +17,7 @@ init_db()
 seed_locations()
 seed_employees()
 
-# ⬅️ создадим таблицу архива, если её ещё нет
+# Создадим таблицу архива, если её нет
 try:
     ArchivedShift.__table__.create(bind=engine, checkfirst=True)
 except Exception as e:
@@ -35,7 +35,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Статика
+# Статика — ЭТА СТРОКА ДОЛЖНА БЫТЬ В ОДНУ СТРОКУ
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Шаблоны
