@@ -29,17 +29,4 @@ app.add_middleware(
 )
 
 # 🔹 Подключаем статику
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
-# 🔹 Подключаем шаблоны Jinja2
-templates = Jinja2Templates(directory="app/templates")
-
-# 🔹 Подключаем маршруты
-app.include_router(admin.router, prefix="/admin")
-app.include_router(public.router, prefix="/api")
-app.include_router(schedule.router)
-
-# 💖 Когда заходим на сайт — показываем расписание
-@app.get("/", response_class=HTMLResponse)
-def render_schedule(request: Request):
-    return RedirectResponse(url="/schedule", status_code=303)
+app.mount("/static", StaticFiles(directory=
