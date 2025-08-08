@@ -35,8 +35,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Статика — ЭТА СТРОКА ДОЛЖНА БЫТЬ В ОДНУ СТРОКУ
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+# Статика — ЭТА СТРОКА где необъяснимо теряется скобка 
+from fastapi.staticfiles import StaticFiles  # убедись, что импорт есть
+
+app.mount(
+    "/static",
+    StaticFiles(directory="app/static"),
+    name="static",
+)
+
 
 # Шаблоны
 templates = Jinja2Templates(directory="app/templates")
