@@ -1,89 +1,148 @@
-from fastapi import APIRouter, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
-
-from app.database import SessionLocal
-from app.models import Employee, Location, Schedule
-
-router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
-
-
-@router.get("/schedule", response_class=HTMLResponse)
-def show_schedule(request: Request, error: str = None):
-    db: Session = SessionLocal()
-
-    # Загружаем сотрудников и локации
-    employees = db.query(Employee).all()
-    locations = db.query(Location).all()
-
-    # Заглушка для примера (сюда вставишь логику получения графика из БД)
-    schedule_data = {loc.name: [""] * 14 for loc in locations}
-
-    # Список дат в формате дд.мм день недели
-    dates = []  # Тут твоя генерация дат
-    raw_dates = []  # "Сырой" формат для формы
-
-    # Карта {имя_локации: id}
-    locations_map = {loc.name: loc.id for loc in locations}
-
-    # Проверка, админ ли пользователь
-    is_admin = request.cookies.get("auth") == "admin_logged_in"
-
-    return templates.TemplateResponse(
-        "schedule.html",
-        {
-            "request": request,
-            "schedule_data": schedule_data,
-            "dates": dates,
-            "raw_dates": raw_dates,
-            "employees": employees,
-            "locations_map": locations_map,
-            "is_admin": is_admin,
-            "error": error is not None
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>График сотрудников</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            color: #333;
         }
-    )
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        }
+        .login-form input {
+            padding: 4px;
+            margin-right: 4px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .login-form button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        h1 {
+            text-align: center;
+            margin: 20px 0;
+        }
+        table {
+            border-collapse: collapse;
+            width: 95%;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        select {
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .button-container {
+            text-align: center;
+            margin: 20px;
+        }
+        .generate-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .generate-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
 
+<header>
+    <div><strong>График сотрудников</strong></div>
+    <div>
+        {% if is_admin %}
+            <form method="get" action="/logout" class="login-form" style="display:inline;">
+                <button type="submit">Выйти</button>
+            </form>
+        {% else %}
+            <form method="post" action="/login" class="login-form" style="display:inline;">
+                <input name="username" placeholder="Логин">
+                <input name="password" type="password" placeholder="Пароль">
+                <button type="submit">Войти</button>
+            </form>
+        {% endif %}
+    </div>
+</header>
 
-@router.post("/schedule/update")
-def update_schedule(
-    request: Request,
-    date_str: str = Form(...),
-    location_id: int = Form(...),
-    employee_id: int = Form(...)
-):
-    # Проверяем авторизацию
-    if request.cookies.get("auth") != "admin_logged_in":
-        return RedirectResponse(url="/schedule", status_code=302)
+<table>
+    <thead>
+        <tr>
+            <th>Локация</th>
+            {% for date_str in dates %}
+                <th>{{ date_str }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for loc_name, row in schedule_data.items() %}
+            <tr>
+                <td>{{ loc_name }}</td>
+                {% for emp_name in row %}
+                    <td>
+                        {% if is_admin %}
+                            <form method="post" action="/schedule/update">
+                                <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
+                                <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
+                                <select name="employee_id" onchange="this.form.submit()">
+                                    <option value="">-- пусто --</option>
+                                    {% for emp in employees %}
+                                        <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
+                                            {{ emp.full_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        {% else %}
+                            {{ emp_name }}
+                        {% endif %}
+                    </td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
-    db: Session = SessionLocal()
+{% if is_admin %}
+<div class="button-container">
+    <form method="post" action="/schedule/generate">
+        <button type="submit" class="generate-btn">Сгенерировать график</button>
+    </form>
+</div>
+{% endif %}
 
-    # Обновляем или создаём запись графика
-    schedule_entry = (
-        db.query(Schedule)
-        .filter(Schedule.date == date_str, Schedule.location_id == location_id)
-        .first()
-    )
-    if schedule_entry:
-        schedule_entry.employee_id = employee_id
-    else:
-        new_entry = Schedule(
-            date=date_str,
-            location_id=location_id,
-            employee_id=employee_id
-        )
-        db.add(new_entry)
-
-    db.commit()
-
-    return RedirectResponse(url="/schedule", status_code=302)
-
-
-@router.post("/schedule/generate")
-def generate_schedule(request: Request):
-    if request.cookies.get("auth") != "admin_logged_in":
-        return RedirectResponse(url="/schedule", status_code=302)
-
-    # Здесь будет логика автогенерации графика
-    return RedirectResponse(url="/schedule", status_code=302)
+</body>
+</html>
