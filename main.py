@@ -33,3 +33,13 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(admin.router, prefix="/admin")
 app.include_router(public.router)
 app.include_router(schedule.router)
+
+from fastapi.responses import RedirectResponse
+
+@app.get("/")
+def redirect_to_static():
+    return RedirectResponse(url="/static/index.html")
+
+
+
+
