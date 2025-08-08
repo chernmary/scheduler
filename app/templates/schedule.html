@@ -4,147 +4,94 @@
     <meta charset="UTF-8">
     <title>График сотрудников</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f9f9f9;
-            margin: 0;
-            padding: 0;
-            color: #333;
-        }
-        h1 {
-            text-align: center;
-            margin: 20px 0;
-        }
-        table {
-            border-collapse: collapse;
-            width: 95%;
-            margin: 20px auto;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 0 10px rgba(0,0,0,0.05);
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-        }
-        th {
-            background-color: #f0f0f0;
-            font-weight: bold;
-        }
-        select {
-            padding: 4px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-        .button-container {
-            text-align: center;
-            margin: 20px;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 18px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        /* Шапка с логином */
-        .top-bar {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            background-color: #fff;
-            padding: 10px 20px;
-            border-bottom: 1px solid #ddd;
-        }
-        .top-bar form {
-            display: flex;
-            gap: 5px;
-        }
-        .top-bar input {
-            padding: 5px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-        .error {
-            color: red;
-            margin-left: 10px;
-            font-size: 14px;
-        }
+        body { font-family: Arial, sans-serif; background:#f9f9f9; margin:0; color:#333; }
+        header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; background:#fff; border-bottom:1px solid #eee; }
+        .left { font-weight:700; }
+        .right { display:flex; align-items:center; gap:10px; }
+        .right a { text-decoration:none; color:#007bff; }
+        .right a:hover { text-decoration:underline; }
+        .login-form input { padding:4px 6px; border:1px solid #ccc; border-radius:4px; }
+        .login-form button { padding:5px 10px; border:none; border-radius:6px; background:#4CAF50; color:#fff; cursor:pointer; }
+        .login-form button:hover { background:#45a049; }
+
+        table { border-collapse:collapse; width:95%; margin:16px auto; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 0 10px rgba(0,0,0,.05); }
+        th, td { border:1px solid #ddd; padding:8px; text-align:center; }
+        th { background:#f0f0f0; font-weight:bold; }
+        select { width:100%; padding:4px; border:1px solid #ccc; border-radius:4px; }
+        .button-container { text-align:center; margin:16px; }
+        .generate-btn { background:#4CAF50; color:#fff; padding:10px 18px; border:none; border-radius:6px; cursor:pointer; }
+        .generate-btn:hover { background:#45a049; }
+        .error { color:#b00020; font-size:13px; }
     </style>
 </head>
 <body>
 
-    <div class="top-bar">
+<header>
+    <div class="left">График сотрудников</div>
+    <div class="right">
         {% if is_admin %}
-            <form method="get" action="/logout">
+            <a href="/admin/employees">Сотрудники</a>
+            <form method="get" action="/logout" style="display:inline;">
                 <button type="submit">Выйти</button>
             </form>
         {% else %}
-            <form method="post" action="/login">
+            <form method="post" action="/login" class="login-form" style="display:inline-flex; gap:6px;">
                 <input name="username" placeholder="Логин" required>
-                <input type="password" name="password" placeholder="Пароль" required>
+                <input name="password" type="password" placeholder="Пароль" required>
                 <button type="submit">Войти</button>
             </form>
             {% if error %}
-                <div class="error">Неверный логин или пароль</div>
+                <span class="error">Неверный логин или пароль</span>
             {% endif %}
         {% endif %}
     </div>
+</header>
 
-    <h1>График сотрудников</h1>
-
-    <table>
-        <thead>
+<table>
+    <thead>
+        <tr>
+            <th>Локация</th>
+            {% for date_str in dates %}
+                <th>{{ date_str }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for loc_name, row in schedule_data.items() %}
             <tr>
-                <th>Локация</th>
-                {% for date_str in dates %}
-                    <th>{{ date_str }}</th>
+                <td>{{ loc_name }}</td>
+                {% for emp_name in row %}
+                    <td>
+                        {% if is_admin %}
+                            <form method="post" action="/schedule/update">
+                                <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
+                                <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
+                                <select name="employee_id" onchange="this.form.submit()">
+                                    <option value="">-- пусто --</option>
+                                    {% for emp in employees %}
+                                        <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
+                                            {{ emp.full_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        {% else %}
+                            {{ emp_name or "—" }}
+                        {% endif %}
+                    </td>
                 {% endfor %}
             </tr>
-        </thead>
-        <tbody>
-            {% for loc_name, row in schedule_data.items() %}
-                <tr>
-                    <td>{{ loc_name }}</td>
-                    {% for emp_name in row %}
-                        <td>
-                            {% if is_admin %}
-                                <form method="post" action="/schedule/update">
-                                    <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
-                                    <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
-                                    <select name="employee_id" onchange="this.form.submit()">
-                                        <option value="">-- пусто --</option>
-                                        {% for emp in employees %}
-                                            <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
-                                                {{ emp.full_name }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                </form>
-                            {% else %}
-                                {{ emp_name }}
-                            {% endif %}
-                        </td>
-                    {% endfor %}
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        {% endfor %}
+    </tbody>
+</table>
 
-    {% if is_admin %}
-    <div class="button-container">
-        <form method="post" action="/schedule/generate">
-            <button type="submit">Сгенерировать график</button>
-        </form>
-    </div>
-    {% endif %}
+{% if is_admin %}
+<div class="button-container">
+    <form method="post" action="/schedule/generate">
+        <button type="submit" class="generate-btn">Сгенерировать график</button>
+    </form>
+</div>
+{% endif %}
 
 </body>
 </html>
