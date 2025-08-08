@@ -10,12 +10,40 @@ templates = Jinja2Templates(directory="app/templates")
 
 @router.get("/schedule", response_class=HTMLResponse)
 async def show_schedule(request: Request):
-    schedule, dates = generate_schedule(start_date=date(2025, 8, 18))
-    return templates.TemplateResponse("schedule.html", {
-        "request": request,
-        "schedule": schedule,
-        "dates": dates
-    })
+    from app.database import SessionLocal
+    from app.models import Shift
+
+    session = SessionLocal()
+    try:
+        start_date = date(2025, 8, 18)
+        existing_shifts = session.query(Shift).filter(Shift.date >= start_date).first()
+
+        if not existing_shifts:
+            from app.scheduler.generator import generate_schedule
+            generate_schedule(start=start_date)
+
+        # Загружаем график из базы
+        shifts = session.query(Shift).all()
+        locations = session.query(Location).order_by(Location.order).all()
+
+        schedule = {}
+        dates = sorted(list({s.date for s in shifts}))
+        formatted_dates = [format_day(d) for d in dates]
+
+        for loc in locations:
+            schedule[loc.name] = []
+            for d in dates:
+                shift = next((s for s in shifts if s.location_id == loc.id and s.date == d), None)
+                schedule[loc.name].append(shift.employee.full_name if shift else "")
+
+        return templates.TemplateResponse("schedule.html", {
+            "request": request,
+            "schedule": schedule,
+            "dates": formatted_dates
+        })
+    finally:
+        session.close()
+
 
 @router.post("/schedule")
 async def regenerate_schedule(request: Request):
