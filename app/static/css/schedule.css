@@ -1,107 +1,97 @@
-/* Сброс */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-/* Базовая типографика и фон */
 body {
-  font-family: "Arial", sans-serif;
-  background: #f5f7fa;
-  color: #333;
-  line-height: 1.4;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background-color: #f5f6fa;
+    margin: 0;
+    padding: 0;
+    color: #2f3640;
 }
 
-/* Шапка */
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  background: #fff;
-  border-bottom: 1px solid #e0e0e0;
+h1 {
+    text-align: center;
+    margin: 25px 0;
+    font-weight: 600;
+    font-size: 28px;
+    color: #273c75;
 }
 
-.nav-tabs a {
-  margin-left: 1.5rem;
-  text-decoration: none;
-  color: #555;
-  font-weight: bold;
+table {
+    border-collapse: collapse;
+    width: 95%;
+    margin: 20px auto;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
 }
 
-.nav-tabs a.active {
-  color: #008cba;
+th, td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+    font-size: 14px;
 }
 
-/* Контейнер */
-.container {
-  max-width: 1200px;
-  margin: 2rem auto;
-  padding: 0 1rem;
+th {
+    background-color: #f0f3f7;
+    font-weight: bold;
 }
 
-/* Заголовок */
-.title {
-  font-size: 1.5rem;
-  margin-bottom: 1.5rem;
-  color: #008cba;
+select {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 13px;
+    background-color: #fff;
+    transition: border-color 0.2s ease;
 }
 
-/* Обёртка таблицы для скролла */
-.table-wrapper {
-  overflow-x: auto;
-  background: #fff;
-  border-radius: 8px;
-  padding: 1rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+select:focus {
+    border-color: #4CAF50;
+    outline: none;
 }
 
-/* Таблица */
-.schedule-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+.button-container {
+    text-align: center;
+    margin: 20px;
 }
 
-.schedule-table th,
-.schedule-table td {
-  padding: 0.75rem 1rem;
-  text-align: center;
-  border-bottom: 1px solid #e0e0e0;
+button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
 }
 
-.schedule-table thead th {
-  background: #f0f4f8;
-  font-weight: normal;
+button:hover {
+    background-color: #45a049;
 }
 
-.location-cell {
-  text-align: left;
-  font-weight: bold;
-  background: #fafafa;
-  position: sticky;
-  left: 0;
-  z-index: 1;
+.login-container {
+    position: absolute;
+    top: 20px;
+    right: 30px;
 }
 
-/* Кнопка */
-.button-row {
-  text-align: center;
-  margin-top: 1.5rem;
+.login-container form {
+    display: flex;
+    gap: 5px;
 }
 
-.btn-generate {
-  padding: 0.75rem 2rem;
-  font-size: 1rem;
-  background: #008cba;
-  color: #fff;
-  border: none;
-  border-radius: 24px;
-  cursor: pointer;
-  transition: background 0.2s;
+.login-container input {
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 13px;
 }
 
-.btn-generate:hover {
-  background: #006f98;
+.login-container button {
+    background-color: #40739e;
+}
+
+.login-container button:hover {
+    background-color: #2f4f73;
 }
