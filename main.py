@@ -19,7 +19,7 @@ seed_employees()
 # Запуск приложения
 app = FastAPI()
 
-# CORS (пусть будет)
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,5 +28,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 🔹 Подключаем статику
-app.mount("/static", StaticFiles(directory=
+# Статика
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Шаблоны
+templates = Jinja2Templates(directory="app/templates")
+
+# Роуты
+app.include_router(admin.router, prefix="/admin")
+app.include_router(public.router, prefix="/api")
+app.include_router(schedule.router)
+
+# Корень -> /schedule
+@app.get("/", response_class=HTMLResponse)
+def render_schedule(request: Request):
+    return RedirectResponse(url="/schedule", status_code=303)
