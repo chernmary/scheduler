@@ -54,9 +54,50 @@
         button:hover {
             background-color: #45a049;
         }
+        /* Шапка с логином */
+        .top-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            background-color: #fff;
+            padding: 10px 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .top-bar form {
+            display: flex;
+            gap: 5px;
+        }
+        .top-bar input {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .error {
+            color: red;
+            margin-left: 10px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
+
+    <div class="top-bar">
+        {% if is_admin %}
+            <form method="get" action="/logout">
+                <button type="submit">Выйти</button>
+            </form>
+        {% else %}
+            <form method="post" action="/login">
+                <input name="username" placeholder="Логин" required>
+                <input type="password" name="password" placeholder="Пароль" required>
+                <button type="submit">Войти</button>
+            </form>
+            {% if error %}
+                <div class="error">Неверный логин или пароль</div>
+            {% endif %}
+        {% endif %}
+    </div>
+
     <h1>График сотрудников</h1>
 
     <table>
@@ -104,5 +145,6 @@
         </form>
     </div>
     {% endif %}
+
 </body>
 </html>
