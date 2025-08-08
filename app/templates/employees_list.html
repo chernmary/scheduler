@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><title>Сотрудники</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:20px}
+    table{border-collapse:collapse;width:100%}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left}
+    th{background:#f5f5f5}
+    a{color:#007bff;text-decoration:none}
+    a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <h1>Сотрудники</h1>
+  <table>
+    <tr><th>ФИО</th><th>Телефон</th><th>Telegram</th></tr>
+    {% for emp in employees %}
+      <tr>
+        <td><a href="/admin/employees/{{ emp.id }}">{{ emp.full_name }}</a></td>
+        <td>{{ emp.phone or '—' }}</td>
+        <td>{{ emp.telegram_nick or '—' }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+  <p><a href="/schedule">← обратно к графику</a></p>
+</body>
+</html>
