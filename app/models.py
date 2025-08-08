@@ -74,3 +74,11 @@ class Assignment(Base):
 
     employee = relationship("Employee", back_populates="assignments")
     location = relationship("Location", back_populates="assignments")
+
+class ArchivedShift(Base):
+    __tablename__ = "archived_shifts"
+    id = Column(Integer, primary_key=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=True)
+    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    date = Column(Date, nullable=False)
+
