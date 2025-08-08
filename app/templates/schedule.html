@@ -1,9 +1,5 @@
 <!DOCTYPE html>
 <html lang="ru">
-    <form method="post" action="/schedule">
-    <button type="submit">🔄 Сгенерировать график</button>
-</form>
-
 <head>
     <meta charset="UTF-8">
     <title>График смен</title>
@@ -15,56 +11,3 @@
         }
         h1 {
             text-align: center;
-            color: #444;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-top: 30px;
-            background-color: #fff;
-        }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 12px;
-            text-align: center;
-        }
-        th {
-            background-color: #f0f0f0;
-        }
-        td {
-            font-size: 14px;
-        }
-        tr:hover {
-            background-color: #f9f9f9;
-        }
-        .location {
-            text-align: left;
-            font-weight: bold;
-            background-color: #fefefe;
-        }
-    </style>
-</head>
-<body>
-    <h1>График смен</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Локация</th>
-                {% for date in dates %}
-                    <th>{{ date }}</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for location in schedule %}
-                <tr>
-                    <td class="location">{{ location }}</td>
-                    {% for employee in schedule[location] %}
-                        <td>{{ employee or "" }}</td>
-                    {% endfor %}
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</body>
-</html>
