@@ -3,70 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <title>График сотрудников</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/schedule.css">
 </head>
 <body>
-    <header>
+    <div class="header">
         <h1>График сотрудников</h1>
-        <div class="login-container">
-            {% if is_admin %}
-                <a href="/logout" class="logout-btn">Выйти</a>
-            {% else %}
-                <form method="post" action="/login" class="login-form">
-                    <input type="text" name="username" placeholder="Логин" required>
-                    <input type="password" name="password" placeholder="Пароль" required>
-                    <button type="submit">Войти</button>
-                </form>
-            {% endif %}
-        </div>
-    </header>
+        {% if not is_admin %}
+            <form method="post" action="/login" class="login-form">
+                <input type="text" name="username" placeholder="Логин" required>
+                <input type="password" name="password" placeholder="Пароль" required>
+                <button type="submit">Войти</button>
+            </form>
+        {% else %}
+            <form method="get" action="/logout" class="logout-form">
+                <button type="submit">Выйти</button>
+            </form>
+        {% endif %}
+    </div>
 
-    <main>
-        <table>
-            <thead>
+    <table>
+        <thead>
+            <tr>
+                <th>Локация</th>
+                {% for date_str in dates %}
+                    <th>{{ date_str }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for loc_name, row in schedule_data.items() %}
                 <tr>
-                    <th>Локация</th>
-                    {% for date_str in dates %}
-                        <th>{{ date_str }}</th>
+                    <td>{{ loc_name }}</td>
+                    {% for emp_name in row %}
+                        <td>
+                            {% if is_admin %}
+                                <form method="post" action="/schedule/update">
+                                    <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
+                                    <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
+                                    <select name="employee_id" onchange="this.form.submit()">
+                                        <option value="">-- пусто --</option>
+                                        {% for emp in employees %}
+                                            <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
+                                                {{ emp.full_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            {% else %}
+                                {{ emp_name or '' }}
+                            {% endif %}
+                        </td>
                     {% endfor %}
                 </tr>
-            </thead>
-            <tbody>
-                {% for loc_name, row in schedule_data.items() %}
-                    <tr>
-                        <td>{{ loc_name }}</td>
-                        {% for emp_name in row %}
-                            <td>
-                                {% if is_admin %}
-                                    <form method="post" action="/schedule/update">
-                                        <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
-                                        <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
-                                        <select name="employee_id" onchange="this.form.submit()">
-                                            <option value="">-- пусто --</option>
-                                            {% for emp in employees %}
-                                                <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
-                                                    {{ emp.full_name }}
-                                                </option>
-                                            {% endfor %}
-                                        </select>
-                                    </form>
-                                {% else %}
-                                    {{ emp_name }}
-                                {% endif %}
-                            </td>
-                        {% endfor %}
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+            {% endfor %}
+        </tbody>
+    </table>
 
-        {% if is_admin %}
-        <div class="button-container">
-            <form method="post" action="/schedule/generate">
-                <button type="submit">Сгенерировать график</button>
-            </form>
-        </div>
-        {% endif %}
-    </main>
+    {% if is_admin %}
+    <div class="button-container">
+        <form method="post" action="/schedule/generate">
+            <button type="submit">Сгенерировать график</button>
+        </form>
+    </div>
+    {% endif %}
 </body>
 </html>
