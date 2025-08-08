@@ -1,78 +1,89 @@
 from fastapi import APIRouter, Request, Form
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from app.database import get_db
+
+from app.database import SessionLocal
 from app.models import Employee, Location, Schedule
-from datetime import datetime, timedelta
-from fastapi import Depends
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
-# Проверка: админ или нет (по куке)
-def is_admin_user(request: Request) -> bool:
-    return request.cookies.get("is_admin") == "true"
 
-@router.get("/schedule")
-def show_schedule(request: Request, db: Session = Depends(get_db)):
-    # Получаем все даты
-    start_date = datetime.now().date()
-    dates = [(start_date + timedelta(days=i)).strftime("%d.%m %A") for i in range(14)]
-    raw_dates = [(start_date + timedelta(days=i)).isoformat() for i in range(14)]
+@router.get("/schedule", response_class=HTMLResponse)
+def show_schedule(request: Request, error: str = None):
+    db: Session = SessionLocal()
 
-    # Получаем список локаций
+    # Загружаем сотрудников и локации
+    employees = db.query(Employee).all()
     locations = db.query(Location).all()
+
+    # Заглушка для примера (сюда вставишь логику получения графика из БД)
+    schedule_data = {loc.name: [""] * 14 for loc in locations}
+
+    # Список дат в формате дд.мм день недели
+    dates = []  # Тут твоя генерация дат
+    raw_dates = []  # "Сырой" формат для формы
+
+    # Карта {имя_локации: id}
     locations_map = {loc.name: loc.id for loc in locations}
 
-    # Получаем сотрудников
-    employees = db.query(Employee).all()
-
-    # Заполняем график (пока пустыми ячейками)
-    schedule_data = {loc.name: [""] * len(dates) for loc in locations}
-
-    is_admin = is_admin_user(request)
+    # Проверка, админ ли пользователь
+    is_admin = request.cookies.get("auth") == "admin_logged_in"
 
     return templates.TemplateResponse(
         "schedule.html",
         {
             "request": request,
+            "schedule_data": schedule_data,
             "dates": dates,
             "raw_dates": raw_dates,
-            "locations_map": locations_map,
             "employees": employees,
-            "schedule_data": schedule_data,
-            "is_admin": is_admin
+            "locations_map": locations_map,
+            "is_admin": is_admin,
+            "error": error is not None
         }
     )
+
 
 @router.post("/schedule/update")
 def update_schedule(
     request: Request,
     date_str: str = Form(...),
     location_id: int = Form(...),
-    employee_id: int = Form(...),
-    db: Session = Depends(get_db)
+    employee_id: int = Form(...)
 ):
-    if not is_admin_user(request):
-        return RedirectResponse(url="/schedule", status_code=303)
+    # Проверяем авторизацию
+    if request.cookies.get("auth") != "admin_logged_in":
+        return RedirectResponse(url="/schedule", status_code=302)
 
-    # Находим или создаём запись в графике
-    schedule_entry = db.query(Schedule).filter_by(date=date_str, location_id=location_id).first()
+    db: Session = SessionLocal()
+
+    # Обновляем или создаём запись графика
+    schedule_entry = (
+        db.query(Schedule)
+        .filter(Schedule.date == date_str, Schedule.location_id == location_id)
+        .first()
+    )
     if schedule_entry:
         schedule_entry.employee_id = employee_id
     else:
-        schedule_entry = Schedule(date=date_str, location_id=location_id, employee_id=employee_id)
-        db.add(schedule_entry)
+        new_entry = Schedule(
+            date=date_str,
+            location_id=location_id,
+            employee_id=employee_id
+        )
+        db.add(new_entry)
 
     db.commit()
-    return RedirectResponse(url="/schedule", status_code=303)
+
+    return RedirectResponse(url="/schedule", status_code=302)
+
 
 @router.post("/schedule/generate")
-def generate_schedule(request: Request, db: Session = Depends(get_db)):
-    if not is_admin_user(request):
-        return RedirectResponse(url="/schedule", status_code=303)
+def generate_schedule(request: Request):
+    if request.cookies.get("auth") != "admin_logged_in":
+        return RedirectResponse(url="/schedule", status_code=302)
 
-    # Здесь будет логика генерации графика
-    print("Генерация графика...")
-    return RedirectResponse(url="/schedule", status_code=303)
+    # Здесь будет логика автогенерации графика
+    return RedirectResponse(url="/schedule", status_code=302)
