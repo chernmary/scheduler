@@ -7,6 +7,7 @@ from datetime import date, timedelta
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
+
 @router.get("/schedule", response_class=HTMLResponse)
 async def show_schedule(request: Request):
     schedule, dates = generate_schedule(start_date=date(2025, 8, 18))
