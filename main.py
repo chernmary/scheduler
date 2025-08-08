@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.run_migrations import run_migrations
@@ -32,14 +32,14 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # 🔹 Подключаем шаблоны Jinja2
-templates = Jinja2Templates(directory="frontend/templates")
+templates = Jinja2Templates(directory="app/templates")
 
 # 🔹 Подключаем маршруты
 app.include_router(admin.router, prefix="/admin")
-app.include_router(public.router)
+app.include_router(public.router, prefix="/api")
 app.include_router(schedule.router)
 
 # 💖 Когда заходим на сайт — показываем расписание
 @app.get("/", response_class=HTMLResponse)
 def render_schedule(request: Request):
-    return templates.TemplateResponse("schedule.html", {"request": request})
+    return RedirectResponse(url="/schedule", status_code=303)
