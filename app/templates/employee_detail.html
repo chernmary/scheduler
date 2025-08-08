@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"><title>{{ employee.full_name }}</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:20px;max-width:700px}
+    .card{background:#fff;border:1px solid #eee;border-radius:8px;padding:16px}
+    .row{margin:8px 0}
+    .label{color:#666}
+    a{color:#007bff;text-decoration:none}
+    a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <h1>{{ employee.full_name }}</h1>
+  <div class="card">
+    <div class="row"><span class="label">Дата рождения:</span> {{ employee.birth_date or '—' }}</div>
+    <div class="row"><span class="label">Телефон:</span> {{ employee.phone or '—' }}</div>
+    <div class="row"><span class="label">Telegram:</span> {{ employee.telegram_nick or '—' }}</div>
+    <div class="row"><span class="label">Заметки:</span> {{ employee.notes or '—' }}</div>
+    <div class="row"><span class="label">Медкнижка до:</span> {{ employee.medical_book_expiry or '—' }}</div>
+  </div>
+  <p><a href="/admin/employees">← назад к списку</a></p>
+</body>
+</html>
