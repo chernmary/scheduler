@@ -62,3 +62,9 @@ def generate_schedule(start: date, weeks: int = 2):
                         continue
                     if shifts_count_2weeks[emp.id] >= max_2w:
                         continue
+    
+    # Здесь закончился цикл — теперь закроем сессию
+    return schedule, dates
+
+finally:
+    session.close()
