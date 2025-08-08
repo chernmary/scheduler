@@ -2,14 +2,16 @@ from fastapi import APIRouter, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from datetime import date, timedelta
-
 from sqlalchemy import and_
+
 from app.database import SessionLocal
-from app.models import Shift, Location, Employee
+from app.models import Shift, Location, Employee, ArchivedShift
 from app.scheduler.generator import generate_schedule
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+
+# ----------------- Вспомогательные функции -----------------
 
 def format_day(d: date) -> str:
     days = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
@@ -26,10 +28,9 @@ def two_week_range() -> list[date]:
 def archive_past_week(session: SessionLocal, start_curr: date):
     """
     Переносит прошедшую неделю в архив:
-    - копирует старые Shift (дата < start_curr) в таблицу archived_shifts
+    - копирует старые Shift (дата < start_curr) в archived_shifts
     - удаляет их из активных
     """
-    from app.models import ArchivedShift  # таблица архива (см. ниже про миграцию)
     last_week_end = start_curr - timedelta(days=1)
     last_week_start = last_week_end - timedelta(days=6)
 
@@ -48,6 +49,8 @@ def archive_past_week(session: SessionLocal, start_curr: date):
         session.delete(s)
     session.commit()
 
+# ----------------- Маршруты -----------------
+
 @router.get("/schedule", response_class=HTMLResponse)
 async def show_schedule(request: Request):
     session = SessionLocal()
@@ -55,7 +58,9 @@ async def show_schedule(request: Request):
         dates = two_week_range()
         locations = session.query(Location).order_by(Location.order).all()
         shifts = session.query(Shift).filter(Shift.date.in_(dates)).all()
+        employees = session.query(Employee).filter_by(is_helper=False, on_sick_leave=False).all()
 
+        locations_map = {loc.name: loc.id for loc in locations}
         schedule = {}
         for loc in locations:
             row = []
@@ -66,7 +71,14 @@ async def show_schedule(request: Request):
 
         return templates.TemplateResponse(
             "schedule.html",
-            {"request": request, "schedule": schedule, "dates": [format_day(d) for d in dates]}
+            {
+                "request": request,
+                "schedule": schedule,
+                "dates": [format_day(d) for d in dates],
+                "raw_dates": [d.isoformat() for d in dates],
+                "locations_map": locations_map,
+                "employees": employees
+            }
         )
     finally:
         session.close()
@@ -76,15 +88,14 @@ async def regenerate_schedule(request: Request):
     session = SessionLocal()
     try:
         start = next_monday()
-        # 1) генерируем на 2 недели (не перезаписывая ручные правки)
+        # 1) Генерация на 2 недели
         generate_schedule(start=start, weeks=2)
-        # 2) архивируем прошедшую неделю
+        # 2) Архивируем прошедшую неделю
         archive_past_week(session, start_curr=start)
         return RedirectResponse(url="/schedule", status_code=303)
     finally:
         session.close()
 
-# Ручная правка одной ячейки (простая форма/запрос из интерфейса)
 @router.post("/schedule/update")
 async def update_cell(
     request: Request,
@@ -99,7 +110,6 @@ async def update_cell(
 
         shift = session.query(Shift).filter_by(location_id=location_id, date=day).first()
         if not shift:
-            # если слота не было — создадим
             shift = Shift(location_id=location_id, date=day, employee_id=employee_id)
             session.add(shift)
         else:
