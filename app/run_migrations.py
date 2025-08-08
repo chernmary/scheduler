@@ -1,23 +1,22 @@
-import os
-from sqlalchemy import create_engine
-from alembic.config import Config
 from alembic import command
+from alembic.config import Config
+import os
 
-# 1. Определяем корень проекта
-project_root = os.path.dirname(os.path.abspath(__file__))
+def run_migrations():
+    # Создаём абсолютный путь к alembic.ini
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    alembic_ini_path = os.path.join(base_dir, "..", "migrations", "alembic.ini")
 
-# 2. Формируем путь к базе данных (если используем SQLite)
-db_path = os.path.join(project_root, "scheduler.db")
-db_url = f"sqlite:///{db_path}"
+    # Создаём конфигурацию Alembic
+    alembic_cfg = Config(alembic_ini_path)
 
-# 3. Создаём файл базы данных, если он не существует
-if not os.path.exists(db_path):
-    engine = create_engine(db_url, connect_args={"check_same_thread": False})
-    engine.connect().close()
+    # Явно указываем путь к папке миграций и URL базы данных
+    migrations_path = os.path.join(base_dir, "..", "migrations")
+    alembic_cfg.set_main_option("script_location", migrations_path)
+    alembic_cfg.set_main_option("sqlalchemy.url", "sqlite:///scheduler.db")
 
-# 4. Указываем Alembic, где находится конфигурация
-alembic_cfg = Config(os.path.join(project_root, "migrations", "alembic.ini"))
-alembic_cfg.set_main_option("sqlalchemy.url", db_url)
+    # Применяем миграции до актуальной версии
+    command.upgrade(alembic_cfg, "head")
 
-# 5. Запускаем миграции
-command.upgrade(alembic_cfg, "head")
+if __name__ == "__main__":
+    run_migrations()
