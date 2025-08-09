@@ -1,98 +1,159 @@
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f9f9f9;
-    margin: 0;
-    padding: 0;
-    color: #333;
+:root{
+  --bg:#f6f7fb;
+  --card:#fff;
+  --text:#1f2937;
+  --muted:#6b7280;
+  --line:#e5e7eb;
+  --primary:#4f46e5;     /* индиго */
+  --primary-600:#4338ca;
+  --accent:#fff4cc;      /* плашка предпросмотра, если добавишь */
 }
 
-h1 {
-    text-align: center;
-    margin: 20px 0;
+* { box-sizing: border-box; }
+html,body{
+  margin:0;
+  padding:0;
+  background:var(--bg);
+  color:var(--text);
+  font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
-.table-wrapper {
-    width: 95%;
-    margin: 0 auto 20px;
-    overflow-x: auto;
+h1{
+  text-align:center;
+  margin:20px 0 14px;
+  font-size:22px;
+  font-weight:700;
 }
 
-table {
-    border-collapse: collapse;
-    width: 100%;
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+.login-container{
+  display:flex;
+  justify-content:flex-end;
+  padding:10px 14px 0;
 }
 
-th, td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: center;
-    word-break: break-word;
-    font-size: 14px;
+.table-wrapper{
+  width: 96%;
+  margin: 0 auto 20px;
+  overflow: auto;                /* горизонтальный скролл, если не влазит */
+  background: transparent;
 }
 
-th {
-    background-color: #f0f0f0;
-    font-weight: bold;
-    position: sticky;
-    top: 0;
-    z-index: 1;
+/* Карточка-таблица */
+.schedule-table{
+  width: 100%;
+  border-collapse: separate;     /* чтобы был радиус */
+  border-spacing: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.06);
 }
 
-tbody tr:nth-child(odd) {
-    background-color: #fafafa;
-}
-tbody tr:hover {
-    background-color: #f2f6ff;
-}
-
-select {
-    padding: 4px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    font-size: 13px;
-}
-
-select:focus-visible {
-    outline: 2px solid #4CAF50;
-    outline-offset: 1px;
+/* Заголовки */
+.schedule-table thead th{
+  position: sticky; top: 0; z-index: 3;
+  background: #f9fafb;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: .02em;
+  padding: 10px 12px;
+  border-bottom:1px solid var(--line);
+  white-space: nowrap;
 }
 
-.button-container {
-    text-align: center;
-    margin: 20px;
+/* Первая колонка (локации) — закрепляем слева */
+.schedule-table th:first-child,
+.schedule-table td:first-child{
+  position: sticky; left: 0; z-index: 2;
+  background: #fbfbfc;
+  font-weight: 600;
+}
+.schedule-table td:first-child{
+  border-right:1px solid var(--line);
 }
 
-button {
-    background-color: #4CAF50;
-    color: white;
-    padding: 10px 18px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s ease;
+/* Ячейки */
+.schedule-table td{
+  border-bottom:1px solid var(--line);
+  border-right:1px solid var(--line);
+  padding: 6px 8px;
+  min-width: 120px;     /* чтобы селекты не ломались */
+  height: 44px;
+  vertical-align: middle;
+  white-space: nowrap;
 }
 
-button:hover {
-    background-color: #45a049;
+/* Последняя колонка/строка — скругления */
+.schedule-table thead th:first-child{ border-top-left-radius:10px; }
+.schedule-table thead th:last-child{ border-top-right-radius:10px; }
+.schedule-table tr:last-child td:first-child{ border-bottom-left-radius:10px; }
+.schedule-table tr:last-child td:last-child{ border-bottom-right-radius:10px; }
+
+/* Зебра по строкам (кроме первой колонки) */
+.schedule-table tbody tr:nth-child(odd) td{
+  background: #fcfdff;
+}
+.schedule-table tbody tr:hover td{
+  background:#f5f7ff;
 }
 
-button:focus-visible {
-    outline: 2px solid #4CAF50;
-    outline-offset: 2px;
+/* Выделим выходные колонки (таблица всегда с понедельника) */
+.schedule-table thead th:nth-child(7),
+.schedule-table thead th:nth-child(8),
+.schedule-table thead th:nth-child(14),
+.schedule-table thead th:nth-child(15),
+.schedule-table tbody td:nth-child(7),
+.schedule-table tbody td:nth-child(8),
+.schedule-table tbody td:nth-child(14),
+.schedule-table tbody td:nth-child(15){
+  background:#fff9f2;
 }
 
-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+/* Кнопки */
+.button-container{
+  text-align:center;
+  margin: 16px 0 28px;
+}
+button{
+  background: var(--primary);
+  color:#fff;
+  padding:10px 16px;
+  border:none; border-radius:8px;
+  font-weight:600;
+  cursor:pointer;
+  transition: .15s ease;
+}
+button:hover{ background: var(--primary-600); }
+button:disabled{ opacity:.6; cursor:not-allowed; }
+
+/* Селекты (оба режима) */
+.schedule-table select{
+  width: 100%;
+  max-width: 220px;
+  padding: 7px 10px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background: #fff;
+  font-size: 13.5px;
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.02);
+}
+.schedule-table select:focus{
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79,70,229,.18);
 }
 
-@media (max-width: 768px) {
-    .table-wrapper {
-        width: 100%;
-    }
+/* В предпросмотре чуть подчеркнём редактируемость */
+.schedule-table.editable td{
+  background-image: linear-gradient(to bottom, rgba(79,70,229,.06), rgba(79,70,229,0));
+  background-clip: padding-box;
+}
+
+/* Мелкие экраны */
+@media (max-width: 1100px){
+  .schedule-table td{ min-width: 100px; }
+}
+@media (max-width: 768px){
+  .table-wrapper{ width: 100%; }
 }
