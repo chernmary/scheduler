@@ -1,71 +1,58 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>График сотрудников</title>
-    <link rel="stylesheet" href="/static/css/schedule.css">
-
+  <meta charset="utf-8">
+  <title>График работы</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Путь чувствителен к регистру папки! -->
+  <link rel="stylesheet" href="/static/css/schedule.css">
 </head>
 <body>
-    <div class="header">
-        <h1>График сотрудников</h1>
-        {% if not is_admin %}
-            <form method="post" action="/login" class="login-form">
-                <input type="text" name="username" placeholder="Логин" required>
-                <input type="password" name="password" placeholder="Пароль" required>
-                <button type="submit">Войти</button>
-            </form>
-        {% else %}
-            <form method="get" action="/logout" class="logout-form">
-                <button type="submit">Выйти</button>
-            </form>
-        {% endif %}
-    </div>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Локация</th>
-                {% for date_str in dates %}
-                    <th>{{ date_str }}</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for loc_name, row in schedule_data.items() %}
-                <tr>
-                    <td>{{ loc_name }}</td>
-                    {% for emp_name in row %}
-                        <td>
-                            {% if is_admin %}
-                                <form method="post" action="/schedule/update">
-                                    <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
-                                    <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
-                                    <select name="employee_id" onchange="this.form.submit()">
-                                        <option value="">-- пусто --</option>
-                                        {% for emp in employees %}
-                                            <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
-                                                {{ emp.full_name }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                </form>
-                            {% else %}
-                                {{ emp_name or '' }}
-                            {% endif %}
-                        </td>
-                    {% endfor %}
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    {% if is_admin %}
-    <div class="button-container">
-        <form method="post" action="/schedule/generate">
-            <button type="submit">Сгенерировать график</button>
-        </form>
-    </div>
+  <div class="login-container">
+    {% if not is_admin %}
+      <form action="/login" method="post">
+        <input type="text" name="username" placeholder="Логин">
+        <input type="password" name="password" placeholder="Пароль">
+        <button type="submit">Войти</button>
+      </form>
+    {% else %}
+      <form action="/logout" method="post">
+        <button type="submit">Выйти</button>
+      </form>
     {% endif %}
+  </div>
+
+  <h1>График работы</h1>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Локация</th>
+          {% for d in dates %}
+            <th>{{ d.strftime('%d.%m %a') }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for loc_name, row in schedule.items() %}
+          <tr>
+            <td>{{ loc_name }}</td>
+            {% for cell in row %}
+              <td>{{ cell }}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if is_admin %}
+    <div class="button-container">
+      <form action="/schedule/generate" method="post">
+        <button type="submit">Сгенерировать график</button>
+      </form>
+    </div>
+  {% endif %}
 </body>
 </html>
