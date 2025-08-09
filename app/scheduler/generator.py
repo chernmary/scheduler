@@ -1,9 +1,16 @@
 # app/scheduler/generator.py
 from datetime import date, timedelta
 from collections import defaultdict
+import sys
+
 from sqlalchemy.orm import Session
 from app.database import SessionLocal, init_db
 from app.models import Employee, EmployeeSetting, Location, Shift
+
+
+def log(*args):
+    """Короткий лог в stdout для Render."""
+    print("[GEN]", *args, file=sys.stdout, flush=True)
 
 
 def load_data(session: Session):
@@ -46,10 +53,15 @@ def generate_schedule(start: date, weeks: int = 2):
     init_db()
     session = SessionLocal()
     try:
+        log("start", start, "weeks", weeks)
+
         employees, settings_map, locations = load_data(session)
+        log("employees", len(employees), "locations", len(locations))
 
         total_days = weeks * 7
         dates = [start + timedelta(days=i) for i in range(total_days)]
+        log("range", dates[0].isoformat(), "->", dates[-1].isoformat())
+
         emp_by_id = {e.id: e for e in employees}
 
         # Лимиты: (emp_id, week_idx) -> cnt и emp_id -> cnt за 2 недели
@@ -61,9 +73,12 @@ def generate_schedule(start: date, weeks: int = 2):
             (s.location_id, s.date): s
             for s in session.query(Shift).filter(Shift.date.in_(dates)).all()
         }
+        log("existing_in_range", len(existing))
 
         # Для отображения (loc.name -> [emp_name per day])
         schedule = {loc.name: [] for loc in locations}
+
+        rows_before = session.query(Shift).count()
 
         for offset, day in enumerate(dates):
             week_idx = offset // 7
@@ -124,7 +139,15 @@ def generate_schedule(start: date, weeks: int = 2):
                     session.add(Shift(employee_id=None, location_id=loc.id, date=day))
                     schedule[loc.name].append("")
 
+        # фиксируем и логируем результат
+        session.flush()
+        rows_after = session.query(Shift).count()
+        log("rows_before", rows_before, "rows_after", rows_after, "added", rows_after - rows_before)
+
         session.commit()
+        log("commit_done")
+
         return schedule, dates
     finally:
         session.close()
+        log("session_closed")
