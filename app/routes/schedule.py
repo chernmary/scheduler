@@ -1,148 +1,60 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>График сотрудников</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f9f9f9;
-            margin: 0;
-            padding: 0;
-            color: #333;
-        }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 20px;
-            background-color: #fff;
-            box-shadow: 0 0 10px rgba(0,0,0,0.05);
-        }
-        .login-form input {
-            padding: 4px;
-            margin-right: 4px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-        .login-form button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 5px 10px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        h1 {
-            text-align: center;
-            margin: 20px 0;
-        }
-        table {
-            border-collapse: collapse;
-            width: 95%;
-            margin: 20px auto;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 0 10px rgba(0,0,0,0.05);
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-        }
-        th {
-            background-color: #f0f0f0;
-            font-weight: bold;
-        }
-        select {
-            padding: 4px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-        .button-container {
-            text-align: center;
-            margin: 20px;
-        }
-        .generate-btn {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 18px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .generate-btn:hover {
-            background-color: #45a049;
-        }
-    </style>
-</head>
-<body>
+# app/routes/schedule.py
+from datetime import date, timedelta
+from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 
-<header>
-    <div><strong>График сотрудников</strong></div>
-    <div>
-        {% if is_admin %}
-            <form method="get" action="/logout" class="login-form" style="display:inline;">
-                <button type="submit">Выйти</button>
-            </form>
-        {% else %}
-            <form method="post" action="/login" class="login-form" style="display:inline;">
-                <input name="username" placeholder="Логин">
-                <input name="password" type="password" placeholder="Пароль">
-                <button type="submit">Войти</button>
-            </form>
-        {% endif %}
-    </div>
-</header>
+from app.database import SessionLocal
+from app.models import Shift, Location, Employee
+# если у тебя другой путь к генератору, поправь импорт ниже
+from app.scheduler.generator import generate_schedule
 
-<table>
-    <thead>
-        <tr>
-            <th>Локация</th>
-            {% for date_str in dates %}
-                <th>{{ date_str }}</th>
-            {% endfor %}
-        </tr>
-    </thead>
-    <tbody>
-        {% for loc_name, row in schedule_data.items() %}
-            <tr>
-                <td>{{ loc_name }}</td>
-                {% for emp_name in row %}
-                    <td>
-                        {% if is_admin %}
-                            <form method="post" action="/schedule/update">
-                                <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
-                                <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
-                                <select name="employee_id" onchange="this.form.submit()">
-                                    <option value="">-- пусто --</option>
-                                    {% for emp in employees %}
-                                        <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
-                                            {{ emp.full_name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </form>
-                        {% else %}
-                            {{ emp_name }}
-                        {% endif %}
-                    </td>
-                {% endfor %}
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+router = APIRouter()
+templates = Jinja2Templates(directory="app/templates")
 
-{% if is_admin %}
-<div class="button-container">
-    <form method="post" action="/schedule/generate">
-        <button type="submit" class="generate-btn">Сгенерировать график</button>
-    </form>
-</div>
-{% endif %}
+def is_admin(request: Request) -> bool:
+    return request.cookies.get("auth") == "admin_logged_in"
 
-</body>
-</html>
+@router.get("/schedule", response_class=HTMLResponse)
+def schedule_view(request: Request):
+    db = SessionLocal()
+    try:
+        # 14 дней, начиная с сегодня
+        start = date.today()
+        days = [start + timedelta(days=i) for i in range(14)]
+        # локации
+        locations = db.query(Location).order_by(Location.id).all()
+        # смены за период
+        shifts = (
+            db.query(Shift)
+              .filter(Shift.date.between(days[0], days[-1]))
+              .all()
+        )
+        # индекс для быстрого доступа
+        idx = {(s.location_id, s.date): s.employee.full_name if s.employee else "" for s in shifts}
+        table = {loc.name: [idx.get((loc.id, d), "") for d in days] for loc in locations}
+
+        employees = db.query(Employee).order_by(Employee.full_name).all()
+
+        return templates.TemplateResponse(
+            "schedule.html",
+            {
+                "request": request,
+                "dates": days,
+                "schedule": table,
+                "employees": employees,
+                "is_admin": is_admin(request),
+            },
+        )
+    finally:
+        db.close()
+
+@router.post("/schedule/generate")
+def schedule_generate(request: Request):
+    if not is_admin(request):
+        return RedirectResponse(url="/schedule", status_code=302)
+    today = date.today()
+    # ближайший понедельник
+    start = today + timedelta(days=(7 - today.weekday()) % 7)
+    generate_schedule(start, weeks=2)
+    return RedirectResponse(url="/schedule", status_code=302)
