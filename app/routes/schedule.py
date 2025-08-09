@@ -157,23 +157,69 @@ def schedule_generate(request: Request):
     finally:
         db.close()
 
-
 @router.post("/schedule/save")
-def schedule_save(request: Request, start_iso: str = Form(...)):
+async def schedule_save(
+    request: Request,
+    start_iso: str = Form(...),
+):
     """
-    Сохранение: пересчитываем тот же диапазон и ПИШЕМ в БД (persist=True),
-    затем редиректим на просмотр сохранённой версии.
+    Сохраняем текущий предпросмотр:
+    1) чистим все Shift в выбранном 14-дневном диапазоне,
+    2) записываем то, что выбрано в селектах (имена полей: emp_<YYYY-MM-DD>_<location_id>).
     """
     if not is_admin(request):
         return RedirectResponse(url="/schedule", status_code=302)
 
+    # читаем дату старта
     try:
         start_date = datetime.fromisoformat(start_iso).date()
     except ValueError:
         start_date = nearest_monday(date.today())
 
-    # Перегенерируем и сохраняем
-    _, _ = generate_schedule(start_date, weeks=2, persist=True)
-    log("save_schedule", start_date.isoformat(), "weeks=2")
+    # формируем список дат диапазона
+    dates, _, _ = make_dates_block(start_date, days=14)
 
-    return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
+    # читаем всю форму «по-канону»
+    form = await request.form()
+
+    db = SessionLocal()
+    try:
+        # все локации
+        locations = db.query(Location).order_by(Location.order).all()
+        loc_ids = [l.id for l in locations]
+
+        # 1) удаляем старые записи этого диапазона
+        db.execute(
+            delete(Shift).where(
+                Shift.date >= dates[0],
+                Shift.date <= dates[-1],
+            )
+        )
+
+        # 2) добавляем выбранные в селектах
+        new_objects = []
+        for d in dates:
+            d_iso = d.isoformat()
+            for loc_id in loc_ids:
+                key = f"emp_{d_iso}_{loc_id}"
+                val = form.get(key, "")
+                if not val:
+                    continue
+                try:
+                    emp_id = int(val)
+                except ValueError:
+                    continue
+                new_objects.append(
+                    Shift(date=d, location_id=loc_id, employee_id=emp_id)
+                )
+
+        if new_objects:
+            db.add_all(new_objects)
+
+        db.commit()
+        return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
+    finally:
+        db.close()
+
+
+    
