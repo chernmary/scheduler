@@ -4,10 +4,11 @@ import sys
 from fastapi import APIRouter, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import delete  # <— нужно для очистки диапазона при сохранении
 
 from app.database import SessionLocal
 from app.models import Shift, Location, Employee
-from app.scheduler.generator import generate_schedule  # persist=True/False
+from app.scheduler.generator import generate_schedule  # persist=True/False (+ respect_existing)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -21,7 +22,9 @@ def is_admin(request: Request) -> bool:
     return request.cookies.get("auth") == "admin_logged_in"
 
 def nearest_monday(today: date) -> date:
-    return today + timedelta(days=(7 - today.weekday()) % 7)
+    # всегда следующий понедельник (если сегодня понедельник — берём через 7 дней)
+    days = (7 - today.weekday()) % 7
+    return today + timedelta(days=days or 7)
 
 def make_dates_block(start: date, days: int = 14):
     all_days = [start + timedelta(d) for d in range(days)]
@@ -29,6 +32,11 @@ def make_dates_block(start: date, days: int = 14):
     raw = [d.isoformat() for d in all_days]
     return all_days, pretty, raw
 
+@router.post("/logout")
+def logout():
+    resp = RedirectResponse(url="/schedule", status_code=302)
+    resp.delete_cookie("auth")  # реально очищаем куку админа
+    return resp
 
 @router.get("/schedule", response_class=HTMLResponse)
 def schedule_view(request: Request, start: str | None = Query(None)):
@@ -75,7 +83,6 @@ def schedule_view(request: Request, start: str | None = Query(None)):
     finally:
         db.close()
 
-
 @router.post("/schedule/update")
 def schedule_update(
     request: Request,
@@ -102,20 +109,19 @@ def schedule_update(
     finally:
         db.close()
 
-
 @router.post("/schedule/generate")
 def schedule_generate(request: Request):
     """
     Предпросмотр: генерируем на 2 недели от ближайшего понедельника, НИЧЕГО не пишем в БД,
-    сразу показываем этот диапазон в том же шаблоне.
+    полностью игнорируем старые записи (respect_existing=False), и показываем результат.
     """
     if not is_admin(request):
         return RedirectResponse(url="/schedule", status_code=302)
 
     start = nearest_monday(date.today())
 
-    # Получаем предпросмотр (persist=False)
-    preview, dates_list = generate_schedule(start, weeks=2, persist=False)
+    # ЧИСТЫЙ предпросмотр (без учёта старых смен)
+    preview, _ = generate_schedule(start, weeks=2, persist=False, respect_existing=False)
     log("generate_preview", start.isoformat(), "weeks=2", f"slots={len(preview)}")
 
     dates, pretty, raw = make_dates_block(start, days=14)
@@ -126,18 +132,17 @@ def schedule_generate(request: Request):
         employees = db.query(Employee).order_by(Employee.full_name).all()
         locations_map = {loc.name: loc.id for loc in locations}
 
+        # Собираем таблицу из предпросмотра
         table = {loc.name: ["" for _ in dates] for loc in locations}
         index_by_date = {d: i for i, d in enumerate(dates)}
+        loc_name_by_id = {l.id: l.name for l in locations}
 
         for item in preview:
             d = item["date"]
             loc_id = item["location_id"]
             emp_name = item["employee_name"] or ""
-            if d in index_by_date:
-                col = index_by_date[d]
-                loc_name = next((l.name for l in locations if l.id == loc_id), None)
-                if loc_name is not None:
-                    table[loc_name][col] = emp_name
+            if d in index_by_date and loc_id in loc_name_by_id:
+                table[loc_name_by_id[loc_id]][index_by_date[d]] = emp_name
 
         return templates.TemplateResponse(
             "schedule.html",
@@ -149,8 +154,8 @@ def schedule_generate(request: Request):
                 "employees": employees,
                 "locations_map": locations_map,
                 "is_admin": is_admin(request),
-                "is_preview": True,
-                "readonly": True,
+                "is_preview": True,   # показываем плашки предпросмотра в шаблоне
+                "readonly": False,    # ВАЖНО: в предпросмотре можно редактировать
                 "start_iso": start.isoformat(),  # понадобится для /schedule/save
             },
         )
@@ -170,21 +175,16 @@ async def schedule_save(
     if not is_admin(request):
         return RedirectResponse(url="/schedule", status_code=302)
 
-    # читаем дату старта
     try:
         start_date = datetime.fromisoformat(start_iso).date()
     except ValueError:
         start_date = nearest_monday(date.today())
 
-    # формируем список дат диапазона
     dates, _, _ = make_dates_block(start_date, days=14)
-
-    # читаем всю форму «по-канону»
     form = await request.form()
 
     db = SessionLocal()
     try:
-        # все локации
         locations = db.query(Location).order_by(Location.order).all()
         loc_ids = [l.id for l in locations]
 
@@ -209,9 +209,7 @@ async def schedule_save(
                     emp_id = int(val)
                 except ValueError:
                     continue
-                new_objects.append(
-                    Shift(date=d, location_id=loc_id, employee_id=emp_id)
-                )
+                new_objects.append(Shift(date=d, location_id=loc_id, employee_id=emp_id))
 
         if new_objects:
             db.add_all(new_objects)
@@ -220,6 +218,3 @@ async def schedule_save(
         return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
     finally:
         db.close()
-
-
-    
