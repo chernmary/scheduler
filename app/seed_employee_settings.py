@@ -1,16 +1,17 @@
-# app/seed_employee_settings.py
 from app.database import SessionLocal
 from app.models import Employee, EmployeeSetting, Location
+
+def norm_name(s: str) -> str:
+    return s.replace("ё", "е").replace("Ё", "Е").strip()
 
 def _to_set(csv_or_none: str | None):
     if not csv_or_none:
         return set()
-    return {s.strip() for s in csv_or_none.split(",") if s.strip()}
+    return {x.strip() for x in csv_or_none.split(",") if x.strip()}
 
 def seed_employee_settings():
     db = SessionLocal()
     try:
-        # Имя -> конфиг (текущая структура из твоего сида)
         settings_data = {
             "Алиса Бойцова": {
                 "preferred_locations": None,
@@ -24,6 +25,7 @@ def seed_employee_settings():
                 "preferred_locations": None,
                 "restricted_locations": "Луномосик,Авиапарк",
             },
+            # ВАЖНО: имя можно писать с Е, нормализуем ниже
             "Катя Пискарева": {
                 "preferred_locations": None,
                 "restricted_locations": "Луномосик,Мастер классы,Прекрасный помогатор",
@@ -49,8 +51,6 @@ def seed_employee_settings():
                 "restricted_locations": "Луномосик,Авиапарк",
             },
             "Полина Колисниченко": {
-                # на больничном — можешь вообще не создавать ей настроек,
-                # но оставим пустые, чтобы логика была единообразной
                 "preferred_locations": "Мастер классы,Прекрасный помогатор",
                 "restricted_locations": None,
             },
@@ -58,28 +58,30 @@ def seed_employee_settings():
                 "preferred_locations": "Луномосик",
                 "restricted_locations": "Москвариум 1,Москвариум 0,Мастер классы,Прекрасный помогатор,Мультпарк,Авиапарк,Москвариум 3",
             },
+            # 🔧 Исправлено: Баринова НЕ допущена в Москвариумы, МК и Мультпарк
             "София Баринова": {
                 "preferred_locations": "Прекрасный помогатор,Луномосик,Авиапарк",
-                "restricted_locations": None,
+                "restricted_locations": "Москвариум 1,Москвариум 0,Москвариум 3,Мастер классы,Мультпарк",
             },
         }
 
         employees = db.query(Employee).all()
         locations = db.query(Location).all()
-        loc_by_name = {l.name.strip(): l for l in locations}
 
-        # очистку существующих настроек НЕ делаю; если надо — раскомментируй:
-        # db.query(EmployeeSetting).delete()
+        # нормализованный словарь конфигов (ё=е)
+        cfg_by_name = {norm_name(k): v for k, v in settings_data.items()}
+        loc_names = {l.name for l in locations}  # на всякий случай
 
         for emp in employees:
-            cfg = settings_data.get(emp.full_name)  # ⚠️ именно full_name
+            cfg = cfg_by_name.get(norm_name(emp.full_name))
+            # перезаписываем настройки сотрудника (не копим старые)
+            db.query(EmployeeSetting).filter(EmployeeSetting.employee_id == emp.id).delete()
+
             preferred = _to_set(cfg["preferred_locations"]) if cfg else set()
             restricted = _to_set(cfg["restricted_locations"]) if cfg else set()
 
             for loc in locations:
-                # is_allowed: всё, что не в restricted
                 is_allowed = (loc.name not in restricted) if cfg else True
-                # is_preferred: только те, что явно перечислены в preferred
                 is_preferred = (loc.name in preferred) if cfg else False
 
                 db.add(EmployeeSetting(
@@ -90,6 +92,6 @@ def seed_employee_settings():
                 ))
 
         db.commit()
-        print("[SEED_SETTINGS] OK: employee_settings filled")
+        print("[SEED_SETTINGS] OK: employee_settings filled (overwritten)")
     finally:
         db.close()
