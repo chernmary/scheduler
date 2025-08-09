@@ -6,6 +6,21 @@
     <link rel="stylesheet" href="/static/css/schedule.css">
 </head>
 <body>
+    <!-- Форма входа -->
+    <div class="login-container">
+        {% if not is_admin %}
+        <form method="post" action="/login">
+            <input type="text" name="username" placeholder="Логин">
+            <input type="password" name="password" placeholder="Пароль">
+            <button type="submit">Войти</button>
+        </form>
+        {% else %}
+        <form method="post" action="/logout">
+            <button type="submit">Выйти</button>
+        </form>
+        {% endif %}
+    </div>
+
     <h1>График сотрудников</h1>
 
     <div class="table-wrapper">
