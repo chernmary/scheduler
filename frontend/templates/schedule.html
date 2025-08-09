@@ -3,58 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>График сотрудников</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f9f9f9;
-            margin: 0;
-            padding: 0;
-            color: #333;
-        }
-        h1 {
-            text-align: center;
-            margin: 20px 0;
-        }
-        table {
-            border-collapse: collapse;
-            width: 95%;
-            margin: 20px auto;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 0 10px rgba(0,0,0,0.05);
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-        }
-        th {
-            background-color: #f0f0f0;
-            font-weight: bold;
-        }
-        select {
-            padding: 4px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-        .button-container {
-            text-align: center;
-            margin: 20px;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 18px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/schedule.css">
 </head>
 <body>
     <h1>График сотрудников</h1>
@@ -69,13 +18,13 @@
             </tr>
         </thead>
         <tbody>
-            {% for loc_name, row in schedule_data.items() %}
+            {% for loc_name, row in schedule.items() %}
                 <tr>
                     <td>{{ loc_name }}</td>
                     {% for emp_name in row %}
                         <td>
                             <form method="post" action="/schedule/update">
-                                <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
+                                <input type="hidden" name="date_str" value="{{ dates[loop.index0] }}">
                                 <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
                                 <select name="employee_id" onchange="this.form.submit()">
                                     <option value="">-- пусто --</option>
@@ -102,6 +51,3 @@
     {% endif %}
 </body>
 </html>
-
-
-
