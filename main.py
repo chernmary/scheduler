@@ -8,15 +8,15 @@ from app.run_migrations import run_migrations
 from app.database import init_db
 from app.seed_locations import seed_locations
 from app.seed_employees import seed_employees
-from app.routes import admin, public, schedule, auth, employees  # добавили auth и employees
+from app.routes import admin, public, schedule, auth, employees
 
-# Миграции и сиды
+# Миграции и сиды — выполняются ДО создания приложения
 run_migrations()
 init_db()
 seed_locations()
 seed_employees()
 
-# Запуск приложения
+# Создание приложения
 app = FastAPI()
 
 # CORS
@@ -38,8 +38,8 @@ templates = Jinja2Templates(directory="app/templates")
 app.include_router(admin.router, prefix="/admin")
 app.include_router(public.router, prefix="/api")
 app.include_router(schedule.router)
-app.include_router(auth.router)  # роуты авторизации
-app.include_router(employees.router)  # роуты сотрудников
+app.include_router(auth.router)
+app.include_router(employees.router)
 
 # Корень -> /schedule
 @app.get("/", response_class=HTMLResponse)
