@@ -169,6 +169,19 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True, respect
                                 existing[(loc.id, day)] = shift_obj
                         continue
 
+                    # --- Приоритет для сотрудников с единственной локацией (weekend-only) ---
+if loc.name in WEEKEND_ONLY_LOCATIONS:
+    sole_workers = []
+    for emp in employees:
+        # Разрешённые локации для сотрудника
+        allowed_locs = {lid for (eid, lid), s in settings_map.items()
+                        if eid == emp.id and s.is_allowed}
+        # Если только эта локация
+        if allowed_locs == {loc.id} and emp.id not in assigned_today_ids:
+            sole_workers.append(emp)
+    if sole_workers:
+        chosen_emp = sole_workers[0]  # можно рандомизировать при желании
+
                     chosen_emp: Employee | None = None
                     if weekday in (5, 6):
                         if loc.name == "Мастер классы" and week_idx not in special_done_master["Аня Стаценко"]:
