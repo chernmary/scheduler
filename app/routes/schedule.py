@@ -6,33 +6,40 @@ from fastapi.templating import Jinja2Templates
 
 from app.database import SessionLocal
 from app.models import Shift, Location, Employee
-# если у тебя другой путь к генератору, поправь импорт ниже
-from app.scheduler.generator import generate_schedule
+from app.scheduler.generator import generate_schedule  # поправь путь, если у тебя другой
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 def is_admin(request: Request) -> bool:
+    """Проверка, вошёл ли администратор."""
     return request.cookies.get("auth") == "admin_logged_in"
 
 @router.get("/schedule", response_class=HTMLResponse)
 def schedule_view(request: Request):
+    """Отображает график работы."""
     db = SessionLocal()
     try:
-        # 14 дней, начиная с сегодня
-        start = date.today()
-        days = [start + timedelta(days=i) for i in range(14)]
-        # локации
+        start_date = date.today()
+        dates = [start_date + timedelta(days=i) for i in range(14)]
+
         locations = db.query(Location).order_by(Location.id).all()
-        # смены за период
         shifts = (
             db.query(Shift)
-              .filter(Shift.date.between(days[0], days[-1]))
+              .filter(Shift.date.between(dates[0], dates[-1]))
               .all()
         )
-        # индекс для быстрого доступа
-        idx = {(s.location_id, s.date): s.employee.full_name if s.employee else "" for s in shifts}
-        table = {loc.name: [idx.get((loc.id, d), "") for d in days] for loc in locations}
+
+        # (location_id, date) -> имя сотрудника
+        shift_index = {
+            (s.location_id, s.date): s.employee.full_name if s.employee else ""
+            for s in shifts
+        }
+
+        schedule_data = {
+            loc.name: [shift_index.get((loc.id, d), "") for d in dates]
+            for loc in locations
+        }
 
         employees = db.query(Employee).order_by(Employee.full_name).all()
 
@@ -40,8 +47,8 @@ def schedule_view(request: Request):
             "schedule.html",
             {
                 "request": request,
-                "dates": days,
-                "schedule": table,
+                "dates": dates,
+                "schedule": schedule_data,
                 "employees": employees,
                 "is_admin": is_admin(request),
             },
@@ -51,10 +58,13 @@ def schedule_view(request: Request):
 
 @router.post("/schedule/generate")
 def schedule_generate(request: Request):
+    """Генерация нового графика (только для админа)."""
     if not is_admin(request):
         return RedirectResponse(url="/schedule", status_code=302)
+
     today = date.today()
     # ближайший понедельник
     start = today + timedelta(days=(7 - today.weekday()) % 7)
     generate_schedule(start, weeks=2)
+
     return RedirectResponse(url="/schedule", status_code=302)
