@@ -66,10 +66,11 @@ def load_data(session: Session):
     return employees, settings_map, locations, weekend_only_emp
 
 # --- Основное ---
-def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
+def generate_schedule(start: date, weeks: int = 2, persist: bool = True, respect_existing: bool = True):
     """
-    Если persist=True — записывает график в БД.
-    Если persist=False — только формирует предпросмотр и не сохраняет.
+    persist=True  -> пишет в БД.
+    persist=False -> только предпросмотр (в БД не лезем).
+    respect_existing=False -> полностью игнорируем существующие смены (чистый с нуля расчёт).
     """
     init_db()
     session = SessionLocal()
@@ -82,10 +83,14 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
         total_days = weeks * 7
         dates = [start + timedelta(days=i) for i in range(total_days)]
 
-        existing: dict[tuple[int, date], Shift] = {
-            (s.location_id, s.date): s
-            for s in session.query(Shift).filter(Shift.date.in_(dates)).all()
-        }
+        # существующие смены, если их надо учитывать
+        if respect_existing:
+            existing: dict[tuple[int, date], Shift] = {
+                (s.location_id, s.date): s
+                for s in session.query(Shift).filter(Shift.date.in_(dates)).all()
+            }
+        else:
+            existing = {}
 
         selected: Dict[Tuple[int, date], Optional[int]] = {
             (loc_id, d): (s.employee_id if s.employee_id else None)
@@ -100,6 +105,20 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
         special_done_target = defaultdict(set)
         special_done_master = defaultdict(set)
 
+        # учтём существующих только если их «уважаем»
+        if respect_existing:
+            for (loc_id, d), s in existing.items():
+                if s.employee_id:
+                    emp = emp_by_id.get(s.employee_id)
+                    if not emp:
+                        continue
+                    offset = (d - start).days
+                    if 0 <= offset < total_days:
+                        week_idx = offset // 7
+                        week_count[(emp.id, week_idx)] += 1
+                        total_2w[emp.id] += 1
+                        used_loc_week[(emp.id, week_idx)].add(loc_id)
+
         for offset, day in enumerate(dates):
             week_idx = offset // 7
             weekday = day.weekday()
@@ -107,26 +126,24 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
             assigned_today_ids: set[int] = set()
             assigned_by_zone_today: dict[str, set[str]] = defaultdict(set)
 
-            for loc in locations:
-                s = existing.get((loc.id, day))
-                if s and s.employee_id:
-                    emp = emp_by_id.get(s.employee_id)
-                    if emp:
-                        assigned_today_ids.add(emp.id)
-                        assigned_by_zone_today[loc.zone].add(emp.full_name)
-                        week_count[(emp.id, week_idx)] += 1
-                        total_2w[emp.id] += 1
-                        used_loc_week[(emp.id, week_idx)].add(loc.id)
+            if respect_existing:
+                for loc in locations:
+                    s = existing.get((loc.id, day))
+                    if s and s.employee_id:
+                        emp = emp_by_id.get(s.employee_id)
+                        if emp:
+                            assigned_today_ids.add(emp.id)
+                            assigned_by_zone_today[loc.zone].add(emp.full_name)
 
             for preferred_pass in (True, False):
                 for loc in locations:
                     if loc.name in WEEKEND_ONLY_LOCATIONS and weekday not in (5, 6):
                         continue
-                    if (loc.id, day) in existing and existing[(loc.id, day)].employee_id is not None:
+                    if respect_existing and (loc.id, day) in existing and existing[(loc.id, day)].employee_id is not None:
                         continue
 
                     zone = loc.zone
-                    shift_obj = existing.get((loc.id, day))
+                    shift_obj = existing.get((loc.id, day)) if respect_existing else None
 
                     pool: list[tuple[Employee, EmployeeSetting | None, int, int]] = []
                     for emp in employees:
@@ -144,11 +161,12 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                         pool.append((emp, es, w, s_now))
 
                     if not pool:
-                        if shift_obj is None:
+                        selected[(loc.id, day)] = None
+                        if persist and shift_obj is None:
                             shift_obj = Shift(location_id=loc.id, date=day, employee_id=None)
                             session.add(shift_obj)
-                            existing[(loc.id, day)] = shift_obj
-                        selected[(loc.id, day)] = None
+                            if respect_existing:
+                                existing[(loc.id, day)] = shift_obj
                         continue
 
                     chosen_emp: Employee | None = None
@@ -204,14 +222,18 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                         use_pool.sort(key=score)
                         chosen_emp = use_pool[0][0]
 
-                    if shift_obj is None:
-                        shift_obj = Shift(location_id=loc.id, date=day, employee_id=chosen_emp.id)
-                        session.add(shift_obj)
-                        existing[(loc.id, day)] = shift_obj
-                    else:
-                        shift_obj.employee_id = chosen_emp.id
-
                     selected[(loc.id, day)] = chosen_emp.id
+
+                    # обновляем счётчики (и, если persist, БД)
+                    if persist:
+                        if shift_obj is None:
+                            shift_obj = Shift(location_id=loc.id, date=day, employee_id=chosen_emp.id)
+                            session.add(shift_obj)
+                            if respect_existing:
+                                existing[(loc.id, day)] = shift_obj
+                        else:
+                            shift_obj.employee_id = chosen_emp.id
+
                     assigned_today_ids.add(chosen_emp.id)
                     assigned_by_zone_today[zone].add(chosen_emp.full_name)
                     week_count[(chosen_emp.id, week_idx)] += 1
@@ -228,7 +250,7 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                 new_streak[e.id] = (prev_streak[e.id] + 1) if (e.id in assigned_today_ids) else 0
             prev_streak = new_streak
 
-        # Формируем предпросмотр
+        # Сбор предпросмотра
         preview: List[dict] = []
         for (loc_id, d), emp_id in selected.items():
             loc = loc_by_id.get(loc_id)
@@ -242,10 +264,7 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
             })
 
         if persist:
-            session.flush()
             session.commit()
-        else:
-            session.rollback()
 
         return preview, dates
     finally:
