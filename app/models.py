@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Date, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db_base import Base  # база теперь импортируется отсюда
 
+
 # 🧍 Сотрудник
 class Employee(Base):
     __tablename__ = "employees"
@@ -21,6 +22,7 @@ class Employee(Base):
     settings = relationship("EmployeeSetting", back_populates="employee", cascade="all, delete")
     assignments = relationship("Assignment", back_populates="employee", cascade="all, delete")
 
+
 # 📍 Локация
 class Location(Base):
     __tablename__ = "locations"
@@ -33,13 +35,15 @@ class Location(Base):
     shifts = relationship("Shift", back_populates="location", cascade="all, delete")
     assignments = relationship("Assignment", back_populates="location", cascade="all, delete")
 
+
 # 📅 Смена
 class Shift(Base):
     __tablename__ = "shifts"
 
     id = Column(Integer, primary_key=True, index=True)
 
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
+    # Сделали nullable=True, чтобы можно было создавать пустые смены
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=True)
     employee = relationship("Employee", back_populates="shifts")
 
     location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
@@ -48,6 +52,7 @@ class Shift(Base):
     date = Column(Date, nullable=False)
     shift_type = Column(String, nullable=True)  # если появятся типы смен
     is_template = Column(Boolean, default=False)
+
 
 # ⚙️ Настройки и ограничения для сотрудников
 class EmployeeSetting(Base):
@@ -63,6 +68,7 @@ class EmployeeSetting(Base):
     employee = relationship("Employee", back_populates="settings")
     location = relationship("Location")
 
+
 # 🧾 Назначения сотрудников на смену (архив)
 class Assignment(Base):
     __tablename__ = "assignments"
@@ -75,10 +81,11 @@ class Assignment(Base):
     employee = relationship("Employee", back_populates="assignments")
     location = relationship("Location", back_populates="assignments")
 
+
 class ArchivedShift(Base):
     __tablename__ = "archived_shifts"
+
     id = Column(Integer, primary_key=True)
     employee_id = Column(Integer, ForeignKey("employees.id"), nullable=True)
     location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
     date = Column(Date, nullable=False)
-
