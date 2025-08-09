@@ -8,6 +8,7 @@ from app.run_migrations import run_migrations
 from app.database import init_db
 from app.seed_locations import seed_locations
 from app.seed_employees import seed_employees
+from app.seed_employee_settings import seed_employee_settings
 from app.routes import admin, public, schedule, auth, employees
 
 # Миграции и сиды — выполняются ДО создания приложения
@@ -15,6 +16,7 @@ run_migrations()
 init_db()
 seed_locations()
 seed_employees()
+seed_employee_settings()
 
 # Создание приложения
 app = FastAPI()
