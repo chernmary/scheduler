@@ -39,7 +39,8 @@
                         <td>{{ loc_name }}</td>
                         {% for emp_name in row %}
                             <td>
-                                {% if is_admin %}
+                                {% if is_admin and not readonly %}
+                                <!-- Режим обычного редактирования -->
                                 <form method="post" action="/schedule/update">
                                     <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
                                     <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
@@ -53,6 +54,7 @@
                                     </select>
                                 </form>
                                 {% else %}
+                                    <!-- Режим предпросмотра или для гостей -->
                                     {{ emp_name }}
                                 {% endif %}
                             </td>
@@ -65,9 +67,22 @@
 
     {% if is_admin %}
     <div class="button-container">
-        <form method="post" action="/schedule/generate">
-            <button type="submit">Сгенерировать график</button>
-        </form>
+        {% if is_preview %}
+            <!-- В предпросмотре показываем Сохранить/Отмена -->
+            <form method="post" action="/schedule/save" style="display:inline-block;">
+                <input type="hidden" name="start_iso" value="{{ start_iso }}">
+                <button type="submit">Сохранить</button>
+            </form>
+            <form method="get" action="/schedule" style="display:inline-block; margin-left:8px;">
+                <input type="hidden" name="start" value="{{ start_iso }}">
+                <button type="submit">Отмена</button>
+            </form>
+        {% else %}
+            <!-- В обычном режиме — только Сгенерировать -->
+            <form method="post" action="/schedule/generate">
+                <button type="submit">Сгенерировать график</button>
+            </form>
+        {% endif %}
     </div>
     {% endif %}
 </body>
