@@ -8,43 +8,45 @@
 <body>
     <h1>График сотрудников</h1>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Локация</th>
-                {% for date_str in dates %}
-                    <th>{{ date_str }}</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for loc_name, row in schedule.items() %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
                 <tr>
-                    <td>{{ loc_name }}</td>
-                    {% for emp_name in row %}
-                        <td>
-                            {% if is_admin %}
-                            <form method="post" action="/schedule/update">
-                                <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
-                                <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
-                                <select name="employee_id" onchange="this.form.submit()">
-                                    <option value="">-- пусто --</option>
-                                    {% for emp in employees %}
-                                        <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
-                                            {{ emp.full_name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </form>
-                            {% else %}
-                                {{ emp_name }}
-                            {% endif %}
-                        </td>
+                    <th>Локация</th>
+                    {% for date_str in dates %}
+                        <th>{{ date_str }}</th>
                     {% endfor %}
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {% for loc_name, row in schedule.items() %}
+                    <tr>
+                        <td>{{ loc_name }}</td>
+                        {% for emp_name in row %}
+                            <td>
+                                {% if is_admin %}
+                                <form method="post" action="/schedule/update">
+                                    <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
+                                    <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
+                                    <select name="employee_id" onchange="this.form.submit()">
+                                        <option value="">-- пусто --</option>
+                                        {% for emp in employees %}
+                                            <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
+                                                {{ emp.full_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                                {% else %}
+                                    {{ emp_name }}
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
     {% if is_admin %}
     <div class="button-container">
