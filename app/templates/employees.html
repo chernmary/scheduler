@@ -13,22 +13,18 @@
     <div class="tabs" role="tablist" aria-label="Типы сотрудников">
       <button id="tab-main" class="tab active" role="tab" aria-selected="true" aria-controls="panel-main">Основные</button>
       <button id="tab-helpers" class="tab" role="tab" aria-selected="false" aria-controls="panel-helpers">Хелперы</button>
+      <div class="spacer"></div>
+      <button id="btn-add" class="btn primary">Добавить</button>
     </div>
 
     <div id="panel-main" class="tab-panel" role="tabpanel" aria-labelledby="tab-main">
-      <div class="toolbar">
-        <!-- Кнопки действий добавим позже -->
-      </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>ФИО</th>
-              <th>Телефон</th>
-              <th>Телеграм</th>
-              <th>Дата рождения</th>
-              <th>Медкнижка до</th>
-              <th>Заметки</th>
+              <th>Больничный</th>
+              <th class="actions-col">Действия</th>
             </tr>
           </thead>
           <tbody id="employees-tbody"></tbody>
@@ -42,11 +38,8 @@
           <thead>
             <tr>
               <th>ФИО</th>
-              <th>Телефон</th>
-              <th>Телеграм</th>
-              <th>Дата рождения</th>
-              <th>Медкнижка до</th>
-              <th>Заметки</th>
+              <th>Больничный</th>
+              <th class="actions-col">Действия</th>
             </tr>
           </thead>
           <tbody id="helpers-tbody"></tbody>
@@ -54,6 +47,38 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal -->
+  <dialog id="emp-modal">
+    <form id="emp-form" method="dialog">
+      <h3 id="modal-title">Новый сотрудник</h3>
+      <div class="grid">
+        <label class="full">ФИО
+          <input name="full_name" required minlength="2" maxlength="200" placeholder="Иванова Мария"/>
+        </label>
+        <label class="inline">
+          <input type="checkbox" name="on_sick_leave" />
+          На больничном
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="btn-cancel" class="btn">Отмена</button>
+        <button type="submit" class="btn primary" id="btn-save">Сохранить</button>
+      </div>
+      <input type="hidden" name="id" />
+    </form>
+  </dialog>
+
+  <!-- Confirm -->
+  <dialog id="confirm-modal">
+    <div class="confirm-body">
+      <p id="confirm-text">Вы уверены?</p>
+      <div class="modal-actions">
+        <button class="btn" id="confirm-cancel">Отмена</button>
+        <button class="btn danger" id="confirm-ok">Да</button>
+      </div>
+    </div>
+  </dialog>
 
   <script src="/static/employees.js"></script>
 </body>
