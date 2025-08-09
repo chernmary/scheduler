@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Сотрудники</title>
+  <link rel="stylesheet" href="/static/employees.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Сотрудники</h1>
+
+    <div class="tabs" role="tablist" aria-label="Типы сотрудников">
+      <button id="tab-main" class="tab active" role="tab" aria-selected="true" aria-controls="panel-main">Основные</button>
+      <button id="tab-helpers" class="tab" role="tab" aria-selected="false" aria-controls="panel-helpers">Хелперы</button>
+    </div>
+
+    <div id="panel-main" class="tab-panel" role="tabpanel" aria-labelledby="tab-main">
+      <div class="toolbar">
+        <!-- Кнопки действий добавим позже -->
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ФИО</th>
+              <th>Телефон</th>
+              <th>Телеграм</th>
+              <th>Дата рождения</th>
+              <th>Медкнижка до</th>
+              <th>Заметки</th>
+            </tr>
+          </thead>
+          <tbody id="employees-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="panel-helpers" class="tab-panel hidden" role="tabpanel" aria-labelledby="tab-helpers">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ФИО</th>
+              <th>Телефон</th>
+              <th>Телеграм</th>
+              <th>Дата рождения</th>
+              <th>Медкнижка до</th>
+              <th>Заметки</th>
+            </tr>
+          </thead>
+          <tbody id="helpers-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/employees.js"></script>
+</body>
+</html>
