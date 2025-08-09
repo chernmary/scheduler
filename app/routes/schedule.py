@@ -7,7 +7,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.database import SessionLocal
 from app.models import Shift, Location, Employee
-from app.scheduler.generator import generate_schedule  # теперь умеет persist=False
+from app.scheduler.generator import generate_schedule  # persist=True/False
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -67,9 +67,9 @@ def schedule_view(request: Request, start: str | None = Query(None)):
                 "employees": employees,
                 "locations_map": locations_map,
                 "is_admin": is_admin(request),
-                # дополнительные флаги не используются шаблоном пока
                 "is_preview": False,
                 "readonly": False,
+                "start_iso": start_date.isoformat(),
             },
         )
     finally:
@@ -97,7 +97,6 @@ def schedule_update(
         shift.employee_id = int(employee_id) if employee_id else None
         db.commit()
         log("update", f"{the_date} loc={location_id} -> emp={shift.employee_id}")
-        # вернёмся на тот же диапазон
         start_param = (the_date - timedelta(days=the_date.weekday())).isoformat()
         return RedirectResponse(url=f"/schedule?start={start_param}", status_code=302)
     finally:
@@ -109,40 +108,33 @@ def schedule_generate(request: Request):
     """
     Предпросмотр: генерируем на 2 недели от ближайшего понедельника, НИЧЕГО не пишем в БД,
     сразу показываем этот диапазон в том же шаблоне.
-    ВАЖНО: селекты пока рабочие — если менять, уйдёт запись. На следующем шаге сделаем кнопку «Сохранить»
-    и заблокируем селекты в режиме предпросмотра.
     """
     if not is_admin(request):
         return RedirectResponse(url="/schedule", status_code=302)
 
     start = nearest_monday(date.today())
 
-    # Получаем предпросмотр (persist=False) и список дат
+    # Получаем предпросмотр (persist=False)
     preview, dates_list = generate_schedule(start, weeks=2, persist=False)
     log("generate_preview", start.isoformat(), "weeks=2", f"slots={len(preview)}")
 
-    # Соберём данные для шаблона из предпросмотра
     dates, pretty, raw = make_dates_block(start, days=14)
 
-    # Нам нужны локации и сотрудники для заголовков/селектов
     db = SessionLocal()
     try:
         locations = db.query(Location).order_by(Location.order).all()
         employees = db.query(Employee).order_by(Employee.full_name).all()
         locations_map = {loc.name: loc.id for loc in locations}
 
-        # Пустая таблица: на каждую локацию — 14 ячеек
         table = {loc.name: ["" for _ in dates] for loc in locations}
-        index_by_date = {d: i for i, d in enumerate(dates)}  # дата -> индекс колонки
+        index_by_date = {d: i for i, d in enumerate(dates)}
 
-        # Заполним из предпросмотра
         for item in preview:
             d = item["date"]
             loc_id = item["location_id"]
             emp_name = item["employee_name"] or ""
             if d in index_by_date:
                 col = index_by_date[d]
-                # найдём имя локации
                 loc_name = next((l.name for l in locations if l.id == loc_id), None)
                 if loc_name is not None:
                     table[loc_name][col] = emp_name
@@ -157,9 +149,31 @@ def schedule_generate(request: Request):
                 "employees": employees,
                 "locations_map": locations_map,
                 "is_admin": is_admin(request),
-                "is_preview": True,   # пока шаблон это не использует, но пригодится следующим шагом
-                "readonly": True,     # аналогично
+                "is_preview": True,
+                "readonly": True,
+                "start_iso": start.isoformat(),  # понадобится для /schedule/save
             },
         )
     finally:
         db.close()
+
+
+@router.post("/schedule/save")
+def schedule_save(request: Request, start_iso: str = Form(...)):
+    """
+    Сохранение: пересчитываем тот же диапазон и ПИШЕМ в БД (persist=True),
+    затем редиректим на просмотр сохранённой версии.
+    """
+    if not is_admin(request):
+        return RedirectResponse(url="/schedule", status_code=302)
+
+    try:
+        start_date = datetime.fromisoformat(start_iso).date()
+    except ValueError:
+        start_date = nearest_monday(date.today())
+
+    # Перегенерируем и сохраняем
+    _, _ = generate_schedule(start_date, weeks=2, persist=True)
+    log("save_schedule", start_date.isoformat(), "weeks=2")
+
+    return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
