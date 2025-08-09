@@ -4,11 +4,11 @@ import sys
 from fastapi import APIRouter, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import delete  # <— нужно для очистки диапазона при сохранении
+from sqlalchemy import delete  # для очистки диапазона при сохранении
 
 from app.database import SessionLocal
 from app.models import Shift, Location, Employee
-from app.scheduler.generator import generate_schedule  # persist=True/False (+ respect_existing)
+from app.scheduler.generator import generate_schedule
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -35,7 +35,7 @@ def make_dates_block(start: date, days: int = 14):
 @router.post("/logout")
 def logout():
     resp = RedirectResponse(url="/schedule", status_code=302)
-    resp.delete_cookie("auth")  # реально очищаем куку админа
+    resp.delete_cookie("auth")  # очищаем куку админа
     return resp
 
 @router.get("/schedule", response_class=HTMLResponse)
@@ -112,17 +112,23 @@ def schedule_update(
 @router.post("/schedule/generate")
 def schedule_generate(request: Request):
     """
-    Предпросмотр: генерируем на 2 недели от ближайшего понедельника, НИЧЕГО не пишем в БД,
-    полностью игнорируем старые записи (respect_existing=False), и показываем результат.
+    Предпросмотр: генерируем на 2 недели от ближайшего понедельника, НЕ пишем в БД,
+    игнорируем старые записи (respect_existing=False). Любую ошибку ловим и даём пустой стол.
     """
     if not is_admin(request):
         return RedirectResponse(url="/schedule", status_code=302)
 
     start = nearest_monday(date.today())
 
-    # ЧИСТЫЙ предпросмотр (без учёта старых смен)
-    preview, _ = generate_schedule(start, weeks=2, persist=False, respect_existing=False)
-    log("generate_preview", start.isoformat(), "weeks=2", f"slots={len(preview)}")
+    # защищённый вызов генератора (если сигнатура вдруг старая)
+    try:
+        preview, _ = generate_schedule(start, weeks=2, persist=False, respect_existing=False)
+    except TypeError as e:
+        log("generate_preview_fallback", "TypeError:", e)
+        preview, _ = generate_schedule(start, weeks=2, persist=False)
+    except Exception as e:
+        log("generate_preview_error", repr(e))
+        preview = []
 
     dates, pretty, raw = make_dates_block(start, days=14)
 
@@ -132,7 +138,7 @@ def schedule_generate(request: Request):
         employees = db.query(Employee).order_by(Employee.full_name).all()
         locations_map = {loc.name: loc.id for loc in locations}
 
-        # Собираем таблицу из предпросмотра
+        # таблица из предпросмотра
         table = {loc.name: ["" for _ in dates] for loc in locations}
         index_by_date = {d: i for i, d in enumerate(dates)}
         loc_name_by_id = {l.id: l.name for l in locations}
@@ -155,8 +161,8 @@ def schedule_generate(request: Request):
                 "locations_map": locations_map,
                 "is_admin": is_admin(request),
                 "is_preview": True,   # показываем плашки предпросмотра в шаблоне
-                "readonly": False,    # ВАЖНО: в предпросмотре можно редактировать
-                "start_iso": start.isoformat(),  # понадобится для /schedule/save
+                "readonly": False,    # можно редактировать перед сохранением
+                "start_iso": start.isoformat(),
             },
         )
     finally:
