@@ -85,8 +85,14 @@
           <button class="btn-gradient" formaction="/schedule/begin_edit" formmethod="post">Сгенерировать</button>
           <button class="btn-gradient" formaction="/schedule/save" formmethod="post">Опубликовать</button>
         {% else %}
-          <button class="btn-gradient" formaction="/schedule/begin_edit" formmethod="post">Начать редактирование</button>
-        {% endif %}
+          {% if can_generate_next %}
+            <button class="btn-gradient" formaction="/schedule/generate_next" formmethod="post">Сгенерировать</button>
+          {% endif %}
+          {% if is_preview %}
+            <button class="btn-gradient" formaction="/schedule/save" formmethod="post">Опубликовать</button>
+          {% else %}
+            <button class="btn-gradient" formaction="/schedule/begin_edit" formmethod="post">Начать редактирование</button>
+          {% endif %}        {% endif %}
       </div>
     {% endif %}
   </form>
