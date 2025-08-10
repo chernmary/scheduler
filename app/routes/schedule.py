@@ -1,5 +1,6 @@
+import logging
+import traceback
 from datetime import date, timedelta, datetime
-import sys
 
 from fastapi import APIRouter, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -13,11 +14,9 @@ from app.scheduler.generator import generate_schedule
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+logger = logging.getLogger("scheduler.view")
 
 RU_WD = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"]
-
-def log(*args):
-    print("[VIEW]", *args, file=sys.stdout, flush=True)
 
 def is_admin(request: Request) -> bool:
     return request.cookies.get("auth") == "admin_logged_in"
@@ -46,7 +45,6 @@ def schedule_view(request: Request, start: str | None = Query(None)):
 
         dates, pretty, raw = make_dates_block(start_date, days=14)
         locations = db.query(Location).order_by(Location.order).all()
-        locations_map = {loc.name: loc.id for loc in locations}
 
         if is_admin(request):
             shifts = db.query(Shift).filter(
@@ -71,7 +69,6 @@ def schedule_view(request: Request, start: str | None = Query(None)):
                 "raw_dates": raw,
                 "schedule": table,
                 "employees": employees,
-                "locations_map": locations_map,
                 "is_admin": is_admin(request),
                 "start_iso": start_date.isoformat(),
             },
@@ -85,8 +82,16 @@ def schedule_generate(request: Request):
         return RedirectResponse(url="/schedule", status_code=302)
 
     start = nearest_monday(date.today())
-    generate_schedule(start, weeks=2, persist=True)
-    return RedirectResponse(url=f"/schedule?start={start.isoformat()}", status_code=302)
+    logger.info("POST /schedule/generate start=%s", start.isoformat())
+    try:
+        err, dates = generate_schedule(start, weeks=2, persist=True)
+        logger.info("Generation OK: %s .. %s", dates[0].isoformat(), dates[-1].isoformat())
+        return RedirectResponse(url=f"/schedule?start={start.isoformat()}", status_code=302)
+    except Exception as e:
+        logger.exception("Generation FAILED")
+        tb = traceback.format_exc()
+        html = f"<h2>Ошибка генерации</h2><pre>{tb}</pre>"
+        return HTMLResponse(html, status_code=500)
 
 @router.post("/schedule/save")
 async def schedule_save(
@@ -109,13 +114,14 @@ async def schedule_save(
         locations = db.query(Location).order_by(Location.order).all()
         loc_ids = [l.id for l in locations]
 
-        db.execute(
+        deleted = db.execute(
             delete(Shift).where(
                 Shift.date >= dates[0],
                 Shift.date <= dates[-1],
                 Shift.status == "draft"
             )
-        )
+        ).rowcount
+        logger.info("Drafts deleted: %s", deleted)
 
         new_objects = []
         for d in dates:
@@ -135,6 +141,7 @@ async def schedule_save(
             db.add_all(new_objects)
 
         db.commit()
+        logger.info("Drafts saved: %s", len(new_objects))
         return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
     finally:
         db.close()
