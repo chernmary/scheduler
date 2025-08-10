@@ -36,14 +36,20 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # Шаблоны
 templates = Jinja2Templates(directory="app/templates")
 
+# Статика
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 # Роуты
+from app.routes.ui_employees import router as ui_employees_router
 app.include_router(admin.router, prefix="/admin")
 app.include_router(public.router, prefix="/api")
 app.include_router(schedule.router)
 app.include_router(auth.router)
 app.include_router(employees.router)
+app.include_router(ui_employees_router)  # ← добавили
 
 # Корень -> /schedule
 @app.get("/", response_class=HTMLResponse)
 def render_schedule(request: Request):
     return RedirectResponse(url="/schedule", status_code=303)
+
