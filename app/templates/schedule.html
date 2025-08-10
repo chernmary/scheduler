@@ -8,6 +8,7 @@
 </head>
 <body>
 
+  <!-- Верхняя панель -->
   <div class="login-container">
     <div class="nav-left">
       <a href="/schedule">График</a>
@@ -23,10 +24,11 @@
 
   <h1>График</h1>
 
+  <!-- Таблица -->
   <div class="table-wrapper">
     <form id="saveForm" method="post" action="{{ request.url_for('schedule_save') }}">
       <input type="hidden" name="start_iso" value="{{ start_iso }}">
-      <table class="schedule-table {% if not readonly %}editable{% endif %}">
+      <table class="schedule-table {% if is_admin %}editable{% endif %}">
         <thead>
           <tr>
             <th>Локации</th>
@@ -44,12 +46,16 @@
                 {% set d_iso = raw_dates[i] %}
                 {% set current_name = row[i] %}
                 <td>
-                  <select name="decisions[{{ d_iso }}][{{ loc_id }}]" {% if readonly %}disabled{% endif %}>
-                    <option value="">—</option>
-                    {% for emp in employees %}
-                      <option value="{{ emp.id }}" {% if emp.full_name == current_name %}selected{% endif %}>{{ emp.full_name }}</option>
-                    {% endfor %}
-                  </select>
+                  {% if is_admin %}
+                    <select name="decisions[{{ d_iso }}][{{ loc_id }}]">
+                      <option value="">—</option>
+                      {% for emp in employees %}
+                        <option value="{{ emp.id }}" {% if emp.full_name == current_name %}selected{% endif %}>{{ emp.full_name }}</option>
+                      {% endfor %}
+                    </select>
+                  {% else %}
+                    {{ current_name or "—" }}
+                  {% endif %}
                 </td>
               {% endfor %}
             </tr>
@@ -59,7 +65,8 @@
     </form>
   </div>
 
-  {% if not readonly %}
+  <!-- Кнопки -->
+  {% if is_admin %}
   <div class="button-container">
     <form method="post" action="{{ request.url_for('schedule_generate') }}">
       <button type="submit">Сгенерировать</button>
@@ -68,6 +75,7 @@
   </div>
   {% endif %}
 
+  <!-- Подвал -->
   <div class="table-wrapper" style="background:transparent; box-shadow:none;">
     <div style="display:flex; gap:20px; align-items:center; justify-content:space-between; color:#6b7280;">
       <div>Период: {{ raw_dates[0] }} — {{ raw_dates[-1] }}</div>
