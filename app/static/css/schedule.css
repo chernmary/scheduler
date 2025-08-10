@@ -6,7 +6,6 @@
   --line:#e5e7eb;
   --primary:#4f46e5;     /* индиго */
   --primary-600:#4338ca;
-  --accent:#fff4cc;      /* плашка предпросмотра, если добавишь */
 }
 
 * { box-sizing: border-box; }
