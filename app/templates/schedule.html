@@ -1,96 +1,75 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>График сотрудников</title>
-    <link rel="stylesheet" href="/static/css/schedule.css">
-</head>
-<body>
-    <div class="header">
-        <div class="login-container">
-            {% if not is_admin %}
-            <form method="post" action="/login">
-                <input type="text" name="username" placeholder="Логин">
-                <input type="password" name="password" placeholder="Пароль">
-                <button type="submit">Войти</button>
-            </form>
-            {% else %}
-            <form method="post" action="/logout">
-                <button type="submit">Выйти</button>
-            </form>
-            {% endif %}
-        </div>
-        <div class="nav-tabs">
-          <a href="/schedule">График</a>
-            {% if is_admin %}
-            <a href="/admin/archive">Архив</a>
-            <a href="/admin/employees">Сотрудники</a>
-            {% endif %}
-        </div>
-    </div>
+{% extends "base.html" %}
+{% block title %}График сотрудников{% endblock %}
 
-    <h1>График сотрудников</h1>
+{% block content %}
+<div class="header">
+  <div class="nav-tabs">
+    <a href="/">График</a>
+    <a href="/archive">Архив</a>
+    <a href="/employees">Сотрудники</a>
+  </div>
 
-    <div class="table-wrapper">
-        <table>
-                        <thead>
-                <tr>
-                    <th>Локация</th>
-                    {% for date in dates %}
-                        <th>{{ date }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for loc_name, row in schedule.items() %}
-                    <tr>
-                        <td>{{ loc_name }}</td>
-                        {% for emp_name in row %}
-                            <td>
-                                {% if is_admin %}
-                                <form method="post" action="/schedule/update">
-                                    <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
-                                    <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
-                                        <input type="hidden" name="start_iso" value="{{ start_iso }}">
-                                    <select name="employee_id" onchange="this.form.submit()">
-                                        <option value="">-- пусто --</option>
-                                        {% for emp in employees %}
-                                            <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
-                                                {{ emp.full_name }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                </form>
-                                {% else %}
-                                    {{ emp_name }}
-                                {% endif %}
-                            </td>
-                        {% endfor %}
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+  {% if not request.session.get("user") %}
+  <div class="login-container">
+    <form action="/login" method="post">
+      <input type="text" name="username" placeholder="Логин">
+      <input type="password" name="password" placeholder="Пароль">
+      <button type="submit">Войти</button>
+    </form>
+  </div>
+  {% else %}
+    <form action="/logout" method="post"><button type="submit">Выйти</button></form>
+  {% endif %}
+</div>
 
-    {% if is_admin %}
-    
+<h1>График сотрудников</h1>
+
+<div class="table-wrapper">
+  <form action="/schedule/save" method="post">
+    <table>
+      <thead>
+        <tr>
+          <th>Локация</th>
+          {% for day in days %}
+            <th>
+              <!-- «Чип» делаем автоматически стилями -->
+              <span class="date-chip">{{ day.date_str }} {{ day.weekday }}</span>
+            </th>
+          {% endfor %}
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for loc in locations %}
+          <tr>
+            <td>{{ loc.name }}</td>
+
+            {% for day in days %}
+              <td>
+                <select
+                  name="assignment[{{ day.iso }}][{{ loc.id }}]"
+                  {% if not is_admin %}disabled{% endif %}>
+                  <option value="">—</option>
+                  {% for emp in employees_by_location[loc.id] %}
+                    <option value="{{ emp.id }}"
+                      {% if assignments[day.iso][loc.id] == emp.id %}selected{% endif %}>
+                      {{ emp.short_name or emp.full_name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
     <div class="button-container">
-        {% if is_preview %}
-        <form method="post" action="/schedule/save">
-            <input type="hidden" name="start_iso" value="{{ start_iso }}">
-            <button type="submit">Опубликовать</button>
-        </form>
-        {% else %}
-        <form method="post" action="/schedule/begin_edit">
-            <input type="hidden" name="start_iso" value="{{ start_iso }}">
-            <button type="submit">Начать редактирование</button>
-        </form>
-        {% endif %}
-        <form method="post" action="/schedule/generate">
-            <input type="hidden" name="start_iso" value="{{ start_iso }}">
-            <button type="submit">Сгенерировать график</button>
-        </form>
+      {% if is_admin %}
+        <button type="submit">Сохранить</button>
+        <button type="submit" formaction="/schedule/generate">Сгенерировать</button>
+      {% endif %}
     </div>
-    {% endif %}
-</body>
-</html>
+  </form>
+</div>
+{% endblock %}
