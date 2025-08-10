@@ -58,3 +58,37 @@ a.ghost:hover{border-color:var(--primary);color:var(--text);}
   .login-container{justify-content:center;}
   .admin-tabs .tab{padding:8px 10px;}
 }
+
+/* --- compact overrides --- */
+html,body{font-size:15px;}
+h1{font-size:18px;margin:10px auto 8px;}
+.admin-tabs{margin:6px auto 8px;}
+.admin-tabs .tab{padding:6px 10px;border-radius:999px;}
+
+.login-container{max-width:1200px;margin:6px auto 0;padding:0 12px;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
+.login-container input{padding:6px 8px;font-size:14px;}
+.login-container button{min-height:36px;padding:6px 10px;border-radius:8px;font-weight:600;}
+/* именно кнопка Выйти — сделать синей и компактной */
+.login-container form[action="/logout"] button{background:var(--primary);color:#fff;border:0;}
+
+.table-wrapper{padding:0 8px;}
+.schedule-table thead th{font-size:13px;padding:8px 8px;}
+.schedule-table tbody td{padding:4px 6px;}
+.schedule-table .loc{font-weight:600;}
+/* селекты компактнее, но удобные на тач */
+.schedule-table select{font-size:14px;padding:4px 6px;border-radius:8px;}
+.schedule-table.editable select{background:#fffbe6;border-color:#f3d98b;}
+
+.actions{margin:8px auto 10px;gap:8px;flex-wrap:wrap;justify-content:center;}
+.button-container{margin:10px auto 16px;}
+button, .button-container button{min-height:36px;padding:8px 12px;border-radius:8px;}
+button.primary{background:var(--primary);color:#fff;border:0;box-shadow:0 4px 12px rgba(59,130,246,.25);}
+a.ghost{padding:8px 12px;border-radius:8px;line-height:20px}
+
+/* мобильная доводка */
+@media (max-width:640px){
+  .actions{flex-direction:column;align-items:stretch;}
+  .actions form, .actions .inline, .actions button, .actions a{width:100%;}
+  .button-container button, .button-container a{width:100%;}
+}
+
