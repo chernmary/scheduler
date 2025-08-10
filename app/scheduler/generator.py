@@ -153,6 +153,20 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
 
                         if not pool:
                             continue
+                                                    if weekday not in (5, 6):
+                            regular_counts = [week_count[(e.id, week_idx)]
+                                               for e in employees
+                                               if not weekend_only_emp.get(e.id, False)]
+                            if regular_counts:
+                                min_w = min(regular_counts)
+                                max_w = max(regular_counts)
+                                if max_w - min_w > 1:
+                                    pool_min = [it for it in pool
+                                                if not weekend_only_emp.get(it[0].id, False)
+                                                and week_count[(it[0].id, week_idx)] == min_w]
+                                    if pool_min:
+                                        pool = pool_min
+
 
                         if weekday in (5, 6):
                             if (loc.name == "Мастер классы"
