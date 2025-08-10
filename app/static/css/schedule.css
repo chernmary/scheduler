@@ -24,7 +24,7 @@ h1{
   font-weight:700;
 }
 
-/* -------- Верхняя панель / навигация -------- */
+/* верхняя панель / навигация */
 .login-container{
   display:flex;
   align-items:center;
@@ -49,18 +49,17 @@ h1{
   border-color:#e0e7ff;
 }
 
-/* -------- Таблица -------- */
+/* таблица */
 .table-wrapper{
   width: 96%;
   margin: 0 auto 20px;
-  overflow: auto;                /* горизонтальный скролл, если не влазит */
+  overflow: auto;
   background: transparent;
 }
 
-/* Карточка-таблица */
 .schedule-table{
   width: 100%;
-  border-collapse: separate;     /* чтобы был радиус */
+  border-collapse: separate;
   border-spacing: 0;
   background: var(--card);
   border: 1px solid var(--line);
@@ -68,7 +67,7 @@ h1{
   box-shadow: 0 6px 18px rgba(0,0,0,.06);
 }
 
-/* Заголовки */
+/* заголовки */
 .schedule-table thead th{
   position: sticky; top: 0; z-index: 3;
   background: #f9fafb;
@@ -81,7 +80,7 @@ h1{
   white-space: nowrap;
 }
 
-/* Первая колонка (локации) — закрепляем слева */
+/* первая колонка (локации) */
 .schedule-table th:first-child,
 .schedule-table td:first-child{
   position: sticky; left: 0; z-index: 2;
@@ -92,24 +91,24 @@ h1{
   border-right:1px solid var(--line);
 }
 
-/* Ячейки */
+/* ячейки */
 .schedule-table td{
   border-bottom:1px solid var(--line);
   border-right:1px solid var(--line);
   padding: 6px 8px;
-  min-width: 120px;     /* чтобы селекты не ломались */
+  min-width: 120px;
   height: 44px;
   vertical-align: middle;
   white-space: nowrap;
 }
 
-/* Последняя колонка/строка — скругления */
+/* скругления */
 .schedule-table thead th:first-child{ border-top-left-radius:10px; }
 .schedule-table thead th:last-child{ border-top-right-radius:10px; }
 .schedule-table tr:last-child td:first-child{ border-bottom-left-radius:10px; }
 .schedule-table tr:last-child td:last-child{ border-bottom-right-radius:10px; }
 
-/* Зебра по строкам (кроме первой колонки) */
+/* зебра */
 .schedule-table tbody tr:nth-child(odd) td{
   background: #fcfdff;
 }
@@ -117,7 +116,7 @@ h1{
   background:#f5f7ff;
 }
 
-/* Выделим выходные колонки (таблица всегда с понедельника) */
+/* выходные (таблица всегда с понедельника) */
 .schedule-table thead th:nth-child(7),
 .schedule-table thead th:nth-child(8),
 .schedule-table thead th:nth-child(14),
@@ -129,7 +128,7 @@ h1{
   background:#fff9f2;
 }
 
-/* Селекты (оба режима) */
+/* селекты (режим админа) */
 .schedule-table select{
   width: 100%;
   max-width: 220px;
@@ -146,13 +145,13 @@ h1{
   box-shadow: 0 0 0 3px rgba(79,70,229,.18);
 }
 
-/* В режиме редактирования слегка подложим подсветку */
+/* лёгкая подложка для режима редактирования */
 .schedule-table.editable td{
   background-image: linear-gradient(to bottom, rgba(79,70,229,.06), rgba(79,70,229,0));
   background-clip: padding-box;
 }
 
-/* -------- Кнопки / действия -------- */
+/* кнопки */
 .button-container{
   text-align:center;
   display:flex;
@@ -174,19 +173,11 @@ button{
 button:hover{ background: var(--primary-600); }
 button:disabled{ opacity:.6; cursor:not-allowed; }
 
-/* -------- Адаптив -------- */
+/* адаптив */
 @media (max-width: 1100px){
   .schedule-table td{ min-width: 100px; }
 }
 @media (max-width: 768px){
   .table-wrapper{ width: 100%; }
-  .button-container{
-    position: sticky;
-    bottom: 0;
-    left: 0; right: 0;
-    background: linear-gradient(to top, #fff 70%, rgba(255,255,255,0));
-    padding: 12px 10px 14px;
-    margin-top: 10px;
-  }
   .login-container{ padding:10px 10px 0; }
 }
