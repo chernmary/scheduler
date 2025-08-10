@@ -1,109 +1,72 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta charset="UTF-8">
-  <title>График сотрудников</title>
-  <link rel="stylesheet" href="/static/css/schedule.css">
+    <meta charset="UTF-8">
+    <title>График сотрудников</title>
+    <link rel="stylesheet" href="/static/css/schedule.css">
 </head>
 <body>
-
-  {% if is_admin %}
-  <nav class="admin-tabs" role="navigation" aria-label="Админ-навигация">
-    <a class="tab tab--active" href="#">График <!-- заглушка --></a>
-    <a class="tab" href="#">Архив <!-- заглушка --></a>
-    <a class="tab" href="#">Сотрудники <!-- заглушка --></a>
-  </nav>
-  {% endif %}
-
-  <div class="login-container">
-    {% if not is_admin %}
-    <form method="post" action="/login">
-      <input type="text" name="username" placeholder="Логин">
-      <input type="password" name="password" placeholder="Пароль">
-      <button type="submit">Войти</button>
-    </form>
-    {% else %}
-    <form method="post" action="/logout">
-      <button type="submit">Выйти</button>
-    </form>
-    {% endif %}
-  </div>
-
-  <h1>График сотрудников</h1>
-
-  {% if is_admin and is_preview %}
-  <form method="post" action="/schedule/save">
-    <input type="hidden" name="start_iso" value="{{ start_iso }}">
-    <div class="actions">
-      <button type="submit" class="primary">Опубликовать</button>
-      <a class="ghost" href="/schedule?start={{ start_iso }}">Отмена</a>
-      {% if can_generate_next %}
-      <form method="post" action="/schedule/generate_next" class="inline">
-        <input type="hidden" name="start_iso" value="{{ start_iso }}">
-        <button type="submit">Сгенерировать следующую неделю</button>
-      </form>
-      {% endif %}
+    <div class="header">
+        <div class="login-container">
+            {% if not is_admin %}
+            <form method="post" action="/login">
+                <input type="text" name="username" placeholder="Логин">
+                <input type="password" name="password" placeholder="Пароль">
+                <button type="submit">Войти</button>
+            </form>
+            {% else %}
+            <form method="post" action="/logout">
+                <button type="submit">Выйти</button>
+            </form>
+            {% endif %}
+        </div>
+        <div class="nav-tabs">
+            <a href="#">График</a>
+            <a href="#">Архив</a>
+            <a href="#">Сотрудники</a>
+        </div>
     </div>
-  {% else %}
+
+    <h1>График сотрудников</h1>
+
+    <div class="table-wrapper">
+        <table>
+            <tbody>
+                {% for loc_name, row in schedule.items() %}
+                    <tr>
+                        <td>{{ loc_name }}</td>
+                        {% for emp_name in row %}
+                            <td>
+                                {% if is_admin %}
+                                <form method="post" action="/schedule/update">
+                                    <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
+                                    <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
+                                    <select name="employee_id" onchange="this.form.submit()">
+                                        <option value="">-- пусто --</option>
+                                        {% for emp in employees %}
+                                            <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
+                                                {{ emp.full_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                                {% else %}
+                                    {{ emp_name }}
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
     {% if is_admin %}
-    <div class="actions">
-      <form method="post" action="/api/schedule/begin_edit" class="inline">
-        <input type="hidden" name="start_iso" value="{{ start_iso }}">
-        <button type="submit" class="primary">Начать редактирование</button>
-      </form>
-      {% if can_generate_next %}
-      <form method="post" action="/api/schedule/generate_next" class="inline">
-        <input type="hidden" name="start_iso" value="{{ start_iso }}">
-        <button type="submit">Сгенерировать следующую неделю</button>
-      </form>
-      {% endif %}
+    <div class="button-container">
+        <form method="post" action="/schedule/generate">
+            <button type="submit">Сгенерировать график</button>
+        </form>
     </div>
     {% endif %}
-  {% endif %}
-
-  <div class="table-wrapper">
-    <table class="schedule-table {% if is_admin and is_preview %}editable{% endif %}">
-      <thead>
-        <tr>
-          <th>Локация</th>
-          {% for date_str in dates %}
-            <th>{{ date_str }}</th>
-          {% endfor %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for loc_name, row in schedule.items() %}
-          <tr>
-            <td class="loc">{{ loc_name }}</td>
-            {% for emp_name in row %}
-              <td>
-                {% if is_admin and is_preview %}
-                  {% set d_iso = raw_dates[loop.index0] %}
-                  <select name="decisions[{{ d_iso }}][{{ locations_map[loc_name] }}]">
-                    <option value="">-- пусто --</option>
-                    {% for emp in employees %}
-                      <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>{{ emp.full_name }}</option>
-                    {% endfor %}
-                  </select>
-                {% else %}
-                  {{ emp_name }}
-                {% endif %}
-              </td>
-            {% endfor %}
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  {% if is_admin and is_preview %}
-    <div class="button-container">
-      <button type="submit" class="primary">Опубликовать</button>
-      <a class="ghost" href="/schedule?start={{ start_iso }}">Отмена</a>
-    </div>
-  </form>
-  {% endif %}
-
 </body>
 </html>
