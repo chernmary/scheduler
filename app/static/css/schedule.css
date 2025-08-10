@@ -1,3 +1,12 @@
+:root {
+    --primary: #4caf50;
+    --primary-dark: #3e8e41;
+    --header-bg: #2c3e50;
+    --header-text: #fff;
+    --row-alt: #f9fbff;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
 body {
     font-family: Arial, sans-serif;
     background-color: #f9f9f9;
@@ -26,7 +35,7 @@ body {
 }
 
 .login-container button {
-    background-color: #4CAF50;
+    background-color: var(--primary);
     color: white;
     padding: 6px 12px;
     border: none;
@@ -36,7 +45,7 @@ body {
 }
 
 .login-container button:hover {
-    background-color: #45a049;
+    background-color: var(--primary-dark);
 }
 
 .nav-tabs a {
@@ -69,41 +78,60 @@ table {
     background: white;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    box-shadow: var(--shadow);
 }
 
 th, td {
     border: 1px solid #ddd;
-    padding: 8px;
+    padding: 10px;
+    line-height: 1.4;
     text-align: center;
     word-break: break-word;
     font-size: 14px;
 }
 
 th {
-    background-color: #f0f0f0;
+    background: linear-gradient(to bottom, var(--header-bg), #1f2c3a);
+    color: var(--header-text);
     font-weight: bold;
     position: sticky;
     top: 0;
+    z-index: 2;
+    backdrop-filter: blur(4px);
+}
+
+td:first-child {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    font-weight: 600;
+    box-shadow: 2px 0 4px rgba(0,0,0,0.05);
     z-index: 1;
 }
 
-tbody tr:nth-child(odd) {
-    background-color: #fafafa;
+tbody tr:nth-child(even) {
+    background: var(--row-alt);
 }
+
 tbody tr:hover {
-    background-color: #f2f6ff;
+    background: rgba(76,175,80,0.1);
+    transition: background 0.2s ease;
 }
 
 select {
-    padding: 4px;
-    border-radius: 4px;
+    padding: 6px 8px;
+    border-radius: 6px;
     border: 1px solid #ccc;
     font-size: 13px;
+    background: #fff;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
+
 select:focus-visible {
-    outline: 2px solid #4CAF50;
+    outline: 2px solid var(--primary);
     outline-offset: 1px;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(76,175,80,0.15);
 }
 
 .button-container {
@@ -112,22 +140,23 @@ select:focus-visible {
 }
 
 button {
-    background-color: #4CAF50;
+    background-color: var(--primary);
     color: white;
     padding: 10px 18px;
     border: none;
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
 button:hover {
-    background-color: #45a049;
+    background-color: var(--primary-dark);
+    transform: translateY(-1px);
 }
 
 button:focus-visible {
-    outline: 2px solid #4CAF50;
+    outline: 2px solid var(--primary);
     outline-offset: 2px;
 }
 
