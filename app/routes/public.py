@@ -43,13 +43,13 @@ def week_range(d: date):
 
 def weekly_rollover(db: Session, now_dt: datetime):
     """
-    ВОСКРЕСЕНЬЕ >= 15:00 Europe/Berlin:
+    ВОСКРЕСЕНЬЕ >= 16:00 Europe/Berlin:
     - переводим published текущей недели в archived
     - удаляем draft этой же недели
     """
     tz = ZoneInfo("Europe/Berlin")
     now = now_dt.astimezone(tz)
-    if now.weekday() != 6 or now.hour < 15:  # только ВС после 15:00
+    if now.weekday() != 6 or now.hour < 16:  # только ВС после 15:00 по матушке Росии 
         return
     w_start, w_end = week_range(now.date())
 
