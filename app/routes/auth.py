@@ -12,8 +12,8 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
         return response
     return HTMLResponse("<p style='color:red; text-align:center;'>Неверный логин или пароль</p>", status_code=401)
 
-@router.get("/logout")
+@router.post("/logout", name="logout")
 def logout():
-    response = RedirectResponse(url="/schedule")
+    response = RedirectResponse(url="/schedule", status_code=302)
     response.delete_cookie("auth")
     return response
