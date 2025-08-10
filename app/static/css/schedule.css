@@ -1,78 +1,134 @@
-.page-title {
-  text-align: center;
-  margin-bottom: 20px;
-  font-size: 1.8em;
+:root{
+  --bg:#f7f9fc;
+  --card:#fff;
+  --line:#e8edf4;
+  --text:#1b2430;
+
+  --pink-weak:#fff5fa;     /* фон ячеек выходных */
+  --pink-weak2:#ffe6f0;    /* фон шапки выходных */
+
+  --grad1:#4facfe;         /* сине-голубой градиент кнопок/чипов */
+  --grad2:#00f2fe;
+
+  --shadow:0 8px 24px rgba(18,28,45,.06);
 }
 
-.table-wrapper {
-  overflow-x: auto;
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font:16px/1.45 Inter, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
-.schedule-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 10px;
-  overflow: hidden;
+.page-title{
+  text-align:center;
+  margin:20px 0 14px;
+  font-size:22px;
+  font-weight:700;
+}
+
+.table-wrapper{
+  width:96%;
+  margin:0 auto 22px;
+  overflow-x:auto;
+}
+
+/* Таблица */
+.schedule-table{
+  width:100%;
+  min-width:860px;
+  border-collapse:separate;
+  border-spacing:0;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:var(--shadow);
 }
 
 .schedule-table th,
-.schedule-table td {
-  padding: 8px;
-  text-align: center;
-  border: 1px solid #ddd;
+.schedule-table td{
+  border-right:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  padding:12px 14px;
+  text-align:center;
+  font-size:14px;
+  background:#fff;
+  white-space:nowrap;
+}
+.schedule-table tr:last-child td{border-bottom:none}
+.schedule-table th:last-child,
+.schedule-table td:last-child{border-right:none}
+
+/* Липкая шапка и первая колонка */
+.schedule-table thead th{
+  position:sticky; top:0; z-index:3;
+  background:#fff;
+}
+.location-col,
+.schedule-table td:first-child{
+  position:sticky; left:0; z-index:4;
+  background:#fff;
+  font-weight:600;
+  text-align:left;
+  padding-left:12px;
+  box-shadow:2px 0 6px rgba(16,24,40,.04);
 }
 
-.location-col {
-  background: #f8f8f8;
-  font-weight: bold;
+/* Чередование строк и hover */
+.schedule-table tbody tr:nth-child(even){ background:#f9fbff; }
+.schedule-table tbody tr:hover td{ background:#f0f5ff; }
+
+/* Даты-чипы */
+.date-header{ background:#f0f8ff; }
+.date-header .date-chip{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:6px 12px; border-radius:999px;
+  background:linear-gradient(135deg, var(--grad1), var(--grad2));
+  color:#fff; font-weight:700; font-size:13px;
+  box-shadow:var(--shadow);
 }
 
-.location-name {
-  font-weight: 500;
-  text-align: left;
-  padding-left: 10px;
+/* Выходные — нежно-розовые */
+.date-header.weekend{ background:var(--pink-weak2); }
+.schedule-table td.weekend{ background:var(--pink-weak); }
+
+/* Селекты */
+select{
+  width:100%;
+  padding:8px 10px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:#fff;
+  font-size:13px;
+  transition:box-shadow .15s ease,border-color .15s ease,background .2s ease;
+}
+select:hover{ background:#fafcff; }
+select:focus-visible{
+  outline:0;
+  border-color:transparent;
+  box-shadow:0 0 0 3px rgba(79,172,254,.25), inset 0 0 0 1px rgba(79,172,254,.45);
 }
 
-.date-header {
-  background: #f0f8ff;
+/* Кнопки — сине-голубой градиент */
+.button-container{
+  text-align:center;
+  margin-top:18px;
 }
-
-.date-header.weekend {
-  background: #ffe6f0; /* нежно-принежно розовый */
+.btn-gradient{
+  background:linear-gradient(135deg, var(--grad1), var(--grad2));
+  color:#fff; border:0;
+  padding:10px 18px; border-radius:12px;
+  cursor:pointer; font-weight:700; font-size:14px;
+  box-shadow:var(--shadow);
+  transition:transform .08s ease, filter .15s ease;
+  margin:0 8px;
 }
+.btn-gradient:hover{ filter:brightness(1.05); transform:translateY(-1px); }
+.btn-gradient:disabled{ opacity:.6; cursor:not-allowed; }
 
-td.weekend {
-  background: #fff5fa;
-}
-
-.date-chip {
-  display: inline-block;
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 4px 10px;
-  font-size: 0.9em;
-  font-weight: 500;
-  border: 1px solid #ddd;
-}
-
-.button-container {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.btn-gradient {
-  background: linear-gradient(45deg, #4facfe, #00f2fe);
-  border: none;
-  color: white;
-  padding: 10px 20px;
-  font-size: 1em;
-  border-radius: 6px;
-  cursor: pointer;
-  margin: 0 10px;
-  transition: transform 0.1s ease-in-out;
-}
-
-.btn-gradient:hover {
-  transform: scale(1.05);
+/* Адаптив */
+@media (max-width: 720px){
+  .schedule-table th, .schedule-table td{ padding:10px 12px; font-size:13px; }
 }
