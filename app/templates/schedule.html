@@ -41,6 +41,7 @@
                                 <form method="post" action="/schedule/update">
                                     <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
                                     <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
+                                        <input type="hidden" name="start_iso" value="{{ start_iso }}">
                                                                             <input type="hidden" name="start_iso" value="{{ start_iso }}">
                                          <select name="employee_id" onchange="this.form.submit()">
                                         <option value="">-- пусто --</option>
@@ -63,7 +64,19 @@
     </div>
 
     {% if is_admin %}
+    {% if is_preview %}
+        <form method="post" action="/schedule/save">
+            <input type="hidden" name="start_iso" value="{{ start_iso }}">
+            <button type="submit">Сохранить и опубликовать</button>
+        </form>
+        {% else %}
+        <form method="post" action="/schedule/begin_edit">
+            <input type="hidden" name="start_iso" value="{{ start_iso }}">
+            <button type="submit">Начать редактирование</button>
+        </form>
+        {% endif %}
     <div class="button-container">
+        <input type="hidden" name="start_iso" value="{{ start_iso }}">
                 {% if is_preview %}
         <form method="post" action="/schedule/save">
             <input type="hidden" name="start_iso" value="{{ start_iso }}">
