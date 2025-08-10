@@ -28,16 +28,19 @@ SPECIAL_STAFF: Dict[str, dict] = {
     "Алиса Бойцова":  {"forbid_weekend": {"Москвариум 0", "Москвариум 1"}},
 }
 
+
 def can_work_setting(es: Optional[EmployeeSetting], preferred_only: bool) -> bool:
     if preferred_only:
         return es is not None and es.is_allowed and getattr(es, "is_preferred", False)
     return es is None or es.is_allowed
+
 
 def violates_pair_zone(emp_name: str, zone: str, by_zone_today: Dict[str, Set[str]]) -> bool:
     if emp_name not in CONFLICT_PAIR:
         return False
     others = CONFLICT_PAIR - {emp_name}
     return any(o in by_zone_today.get(zone, set()) for o in others)
+
 
 def load_data(session: Session):
     # Гибко фильтруем сотрудников: без падений, если полей нет
@@ -76,6 +79,7 @@ def load_data(session: Session):
 
     logger.info("Data loaded: employees=%d, locations=%d, settings=%d", len(employees), len(locations), len(settings))
     return employees, settings_map, locations, weekend_only_emp
+
 
 def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
     logger.info("generate_schedule: start=%s weeks=%s persist=%s", start.isoformat(), weeks, persist)
@@ -153,7 +157,8 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
 
                         if not pool:
                             continue
-                                                    if weekday not in (5, 6):
+
+                        if weekday not in (5, 6):
                             regular_counts = [week_count[(e.id, week_idx)]
                                                for e in employees
                                                if not weekend_only_emp.get(e.id, False)]
@@ -166,7 +171,6 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                                                 and week_count[(it[0].id, week_idx)] == min_w]
                                     if pool_min:
                                         pool = pool_min
-
 
                         if weekday in (5, 6):
                             if (loc.name == "Мастер классы"
@@ -212,7 +216,7 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                                 if s_now >= SOFT_STREAK_TARGET:
                                     pen += (s_now - SOFT_STREAK_TARGET + 1) * 35
                                 if loc.id in used_loc_week[(emp.id, week_idx)]:
-                                    pen += 50
+                                    pen += 300  # штраф за повтор локации в одной неделе
                                 pen += total_2w[emp.id]
                                 pen += random.randint(0, 9)
                                 return pen
