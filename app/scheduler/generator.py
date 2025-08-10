@@ -37,8 +37,7 @@ def violates_pair_zone(emp_name: str, zone: str, by_zone_today: Dict[str, Set[st
     if emp_name not in CONFLICT_PAIR:
         return False
     others = CONFLICT_PAIR - {emp_name}
-    present = by_zone_today.get(zone, set())
-    return any(o in present for o in others)
+    return any(o in by_zone_today.get(zone, set()) for o in others)
 
 def load_data(session: Session):
     employees: List[Employee] = (
@@ -73,19 +72,19 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
     session = SessionLocal()
     try:
         employees, settings_map, locations, weekend_only_emp = load_data(session)
-        emp_id_by_name = {e.full_name: e.id for e in employees}
 
         total_days = weeks * 7
         dates = [start + timedelta(days=i) for i in range(total_days)]
         logger.info("Dates range: %s .. %s (%d days)", dates[0].isoformat(), dates[-1].isoformat(), len(dates))
 
-        deleted = session.query(Shift).filter(
-            Shift.date >= dates[0],
-            Shift.date <= dates[-1],
-            Shift.status == "draft",
-        ).delete(synchronize_session=False)
-        session.commit()
-        logger.info("Old drafts deleted: %s", deleted)
+        if persist:
+            deleted = session.query(Shift).filter(
+                Shift.date >= dates[0],
+                Shift.date <= dates[-1],
+                Shift.status == "draft",
+            ).delete(synchronize_session=False)
+            session.commit()
+            logger.info("Old drafts deleted: %s", deleted)
 
         week_count: Dict[Tuple[int, int], int] = defaultdict(int)
         total_2w: Dict[int, int] = defaultdict(int)
@@ -99,7 +98,6 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
         for wstart in range(0, total_days, 7):
             week_dates = dates[wstart:wstart + 7]
             sorted_week_dates = sorted(week_dates, key=lambda d: 0 if d.weekday() in (5, 6) else 1)
-            logger.info("Week #%d: %s .. %s", wstart // 7, sorted_week_dates[0].isoformat(), sorted_week_dates[-1].isoformat())
 
             for day in sorted_week_dates:
                 week_idx = (day - start).days // 7
@@ -107,8 +105,6 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
 
                 assigned_today_ids: Set[int] = set()
                 assigned_by_zone_today: Dict[str, Set[str]] = defaultdict(set)
-
-                logger.info(" Day %s (wd=%d)", day.isoformat(), weekday)
 
                 for loc in locations:
                     if loc.name in WEEKEND_ONLY_LOCATIONS and weekday not in (5, 6):
@@ -144,7 +140,6 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
 
                             pool.append((emp, es, w, s_now))
 
-                        logger.debug("  Loc '%s' pass=%s pool=%d", loc.name, "preferred" if preferred_pass else "allowed", len(pool))
                         if not pool:
                             continue
 
@@ -156,7 +151,6 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                                 if cand:
                                     chosen_emp = cand
                                     special_done_master["Аня Стаценко"].add(week_idx)
-                                    logger.info("   Priority: 'Мастер классы' -> %s", chosen_emp.full_name)
 
                             if chosen_emp is None and loc.name in SPECIAL_TARGET_SET:
                                 for name, rules in SPECIAL_STAFF.items():
@@ -168,7 +162,6 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                                     if cand:
                                         chosen_emp = cand
                                         special_done_target[name].add(week_idx)
-                                        logger.info("   Priority: target '%s' -> %s", loc.name, chosen_emp.full_name)
                                         break
 
                         if chosen_emp is None:
@@ -209,30 +202,25 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                                 employee_id=chosen_emp.id,
                                 status="draft",
                             ))
+                            total_created += 1
+
                         assigned_today_ids.add(chosen_emp.id)
                         assigned_by_zone_today[zone].add(chosen_emp.full_name)
                         week_count[(chosen_emp.id, week_idx)] += 1
                         total_2w[chosen_emp.id] += 1
                         used_loc_week[(chosen_emp.id, week_idx)].add(loc.id)
-                        total_created += 1
-                        logger.debug("   Assigned: %s -> %s", chosen_emp.full_name, loc.name)
-                    else:
-                        logger.debug("   Skipped: no candidate for %s", loc.name)
 
                 new_streak: Dict[int, int] = defaultdict(int)
                 for e in employees:
                     new_streak[e.id] = (prev_streak[e.id] + 1) if (e.id in assigned_today_ids) else 0
                 prev_streak = new_streak
-                logger.debug("  Day end: assigned=%d", len(assigned_today_ids))
 
         if persist:
             session.commit()
             logger.info("Generation finished, created draft shifts: %d", total_created)
             return None, dates
         else:
-            preview = []
-            logger.info("Preview finished")
-            return preview, dates
+            return [], dates
 
     except Exception:
         logger.exception("generate_schedule failed")
