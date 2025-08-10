@@ -1,30 +1,24 @@
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.database import SessionLocal
-from app.models import Shift, Assignment, Employee
-from datetime import date, timedelta
+from app.database import get_db
+from app.models import Shift, Location, Employee
 
 router = APIRouter()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@router.get("/")
-def public_schedule(db: Session = Depends(get_db)):
-    today = date.today()
-    end = today + timedelta(days=14)
-    shifts = db.query(Shift).filter(Shift.date >= today, Shift.date <= end).all()
-    output = []
-    for shift in shifts:
-        output.append({
-            "date": shift.date.strftime("%Y-%m-%d"),
-            "location": shift.location,
-            "type": shift.shift_type,
-            "employees": [a.employee.full_name for a in shift.assignments]
-        })
-    return output
+@router.get("/schedule")
+def get_public_schedule(db: Session = Depends(get_db)):
+    rows = (
+        db.query(Shift, Location, Employee)
+          .join(Location, Shift.location_id == Location.id)
+          .outerjoin(Employee, Shift.employee_id == Employee.id)
+          .filter(Shift.status == "published")
+          .order_by(Shift.date.asc(), Location.order.asc())
+          .all()
+    )
+    return [
+        {
+            "date": s.date,
+            "location": loc.name,
+            "employee": emp.full_name if emp else None
+        } for (s, loc, emp) in rows
+    ]
