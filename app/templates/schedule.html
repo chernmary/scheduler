@@ -1,101 +1,95 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>График сотрудников</title>
-    <link rel="stylesheet" href="/static/css/schedule.css">
+  <meta charset="UTF-8" />
+  <title>График</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;margin:0;background:#f7f7f9;color:#1f2328}
+    header,footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;background:#fff;border-bottom:1px solid #e7e7ea}
+    .title{font-weight:600}
+    .actions{display:flex;gap:10px}
+    .btn{border:1px solid #d0d7de;background:#fff;border-radius:8px;padding:10px 14px;cursor:pointer}
+    .btn.primary{background:#1f6feb;border-color:#1f6feb;color:#fff}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .container{padding:20px}
+    .table-wrap{overflow:auto;border:1px solid #e7e7ea;border-radius:12px;background:#fff}
+    table{border-collapse:separate;border-spacing:0;width:100%;min-width:900px}
+    th,td{padding:10px 12px;border-bottom:1px solid #f0f1f3}
+    th{position:sticky;top:0;background:#fff;font-weight:600}
+    th:first-child,td:first-child{position:sticky;left:0;background:#fff;border-right:1px solid #f0f1f3}
+    .loc{white-space:nowrap}
+    select{min-width:180px;padding:8px;border:1px solid #d0d7de;border-radius:8px;background:#fff}
+    .controls{display:flex;gap:12px;justify-content:flex-end;margin-top:16px}
+    .note{font-size:12px;color:#6a737d;margin-left:auto}
+    a.link{color:#1f6feb;text-decoration:none}
+  </style>
 </head>
 <body>
-    <div class="login-container">
-        {% if not is_admin %}
-        <form method="post" action="/login">
-            <input type="text" name="username" placeholder="Логин">
-            <input type="password" name="password" placeholder="Пароль">
-            <button type="submit">Войти</button>
-        </form>
-        {% else %}
-        <form method="post" action="/logout">
-            <button type="submit">Выйти</button>
-        </form>
-        {% endif %}
+  <header>
+    <div class="title">График</div>
+    <div class="actions">
+      <a class="btn" href="/admin/archive">Архив</a>
+      {% if is_admin %}
+      <form method="post" action="{{ request.url_for('logout') }}">
+        <button class="btn" type="submit">Выйти</button>
+      </form>
+      {% endif %}
     </div>
+  </header>
 
-    <h1>График сотрудников</h1>
-
-    {% if is_admin and is_preview %}
-    <!-- Единая форма на весь предпросмотр -->
-    <form method="post" action="/schedule/save">
+  <div class="container">
+    <div class="table-wrap">
+      <form id="saveForm" method="post" action="{{ request.url_for('schedule_save') }}">
         <input type="hidden" name="start_iso" value="{{ start_iso }}">
-    {% endif %}
-
-    <div class="table-wrapper">
         <table>
-            <thead>
-                <tr>
-                    <th>Локация</th>
-                    {% for date_str in dates %}
-                        <th>{{ date_str }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for loc_name, row in schedule.items() %}
-                    <tr>
-                        <td>{{ loc_name }}</td>
-                        {% for emp_name in row %}
-                            <td>
-                                {% if is_admin and not readonly and not is_preview %}
-                                <!-- Обычный режим: мгновенная запись в БД -->
-                                <form method="post" action="/schedule/update">
-                                    <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
-                                    <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
-                                    <select name="employee_id" onchange="this.form.submit()">
-                                        <option value="">-- пусто --</option>
-                                        {% for emp in employees %}
-                                            <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
-                                                {{ emp.full_name }}
-                                            </option>
-                                        {% endfor %}
-                                    </select>
-                                </form>
-
-                                {% elif is_admin and is_preview %}
-                                <!-- Предпросмотр: редактируем, но НИЧЕГО не пишем до Save -->
-                                <select name="emp_{{ raw_dates[loop.index0] }}_{{ locations_map[loc_name] }}">
-                                    <option value="">-- пусто --</option>
-                                    {% for emp in employees %}
-                                        <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
-                                            {{ emp.full_name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-
-                                {% else %}
-                                    {{ emp_name }}
-                                {% endif %}
-                            </td>
-                        {% endfor %}
-                    </tr>
+          <thead>
+            <tr>
+              <th>Локации</th>
+              {% for d in dates %}
+                <th>{{ d }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for loc_name, row in schedule.items() %}
+              {% set loc_id = locations_map[loc_name] %}
+              <tr>
+                <td class="loc">{{ loc_name }}</td>
+                {% for i in range(row|length) %}
+                  {% set d_iso = raw_dates[i] %}
+                  {% set current_name = row[i] %}
+                  <td>
+                    <select name="decisions[{{ d_iso }}][{{ loc_id }}]" {% if readonly %}disabled{% endif %}>
+                      <option value="">—</option>
+                      {% for emp in employees %}
+                        <option value="{{ emp.id }}" {% if emp.full_name == current_name %}selected{% endif %}>{{ emp.full_name }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
                 {% endfor %}
-            </tbody>
+              </tr>
+            {% endfor %}
+          </tbody>
         </table>
+      </form>
     </div>
 
-    {% if is_admin %}
-    <div class="button-container">
-        {% if is_preview %}
-            <button type="submit">Сохранить</button>
-            </form> <!-- закрываем форму предпросмотра -->
-            <form method="get" action="/schedule" style="display:inline-block; margin-left:8px;">
-                <input type="hidden" name="start" value="{{ start_iso }}">
-                <button type="submit">Отмена</button>
-            </form>
-        {% else %}
-            <form method="post" action="/schedule/generate">
-                <button type="submit">Сгенерировать график</button>
-            </form>
-        {% endif %}
+    <div class="controls">
+      {% if not readonly %}
+        <form method="post" action="{{ request.url_for('schedule_generate') }}">
+          <button class="btn" type="submit">Сгенерировать</button>
+        </form>
+        <button class="btn primary" type="submit" form="saveForm">Сохранить</button>
+      {% else %}
+        <span class="note">Только просмотр</span>
+      {% endif %}
     </div>
-    {% endif %}
+  </div>
+
+  <footer>
+    <div>Период: {{ raw_dates[0] }} — {{ raw_dates[-1] }}</div>
+    <div class="note">Опубликованный график видно всем. Черновик виден только администратору.</div>
+  </footer>
 </body>
 </html>
