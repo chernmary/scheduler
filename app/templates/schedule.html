@@ -2,61 +2,47 @@
 {% block title %}График сотрудников{% endblock %}
 
 {% block content %}
-<div class="header">
-  <div class="nav-tabs">
-    <a href="/">График</a>
-    <a href="/archive">Архив</a>
-    <a href="/employees">Сотрудники</a>
-  </div>
-
-  {% if not request.session.get("user") %}
-  <div class="login-container">
-    <form action="/login" method="post">
-      <input type="text" name="username" placeholder="Логин">
-      <input type="password" name="password" placeholder="Пароль">
-      <button type="submit">Войти</button>
-    </form>
-  </div>
-  {% else %}
-    <form action="/logout" method="post"><button type="submit">Выйти</button></form>
-  {% endif %}
-</div>
-
-<h1>График сотрудников</h1>
+<h1 class="page-title">График сотрудников</h1>
 
 <div class="table-wrapper">
   <form action="/schedule/save" method="post">
-    <table>
+    <input type="hidden" name="start_iso" value="{{ start_iso }}">
+
+    <table class="schedule-table">
       <thead>
         <tr>
-          <th>Локация</th>
-          {% for day in days %}
-            <th>
-              <!-- «Чип» делаем автоматически стилями -->
-              <span class="date-chip">{{ day.date_str }} {{ day.weekday }}</span>
+          <th class="location-col">Локация</th>
+          {% for date_str in dates %}
+            {% set day_num = loop.index0 %}
+            {% set is_weekend = day_num % 7 in [5, 6] %}
+            <th class="date-header {% if is_weekend %}weekend{% endif %}">
+              <span class="date-chip">{{ date_str }}</span>
             </th>
           {% endfor %}
         </tr>
       </thead>
 
       <tbody>
-        {% for loc in locations %}
+        {% for loc, row in schedule.items() %}
           <tr>
-            <td>{{ loc.name }}</td>
-
-            {% for day in days %}
-              <td>
-                <select
-                  name="assignment[{{ day.iso }}][{{ loc.id }}]"
-                  {% if not is_admin %}disabled{% endif %}>
-                  <option value="">—</option>
-                  {% for emp in employees_by_location[loc.id] %}
-                    <option value="{{ emp.id }}"
-                      {% if assignments[day.iso][loc.id] == emp.id %}selected{% endif %}>
-                      {{ emp.short_name or emp.full_name }}
-                    </option>
-                  {% endfor %}
-                </select>
+            <td class="location-name">{{ loc }}</td>
+            {% for val in row %}
+              {% set day_num = loop.index0 %}
+              {% set is_weekend = day_num % 7 in [5, 6] %}
+              <td class="{% if is_weekend %}weekend{% endif %}">
+                {% if is_admin %}
+                  <select name="decisions[{{ raw_dates[day_num] }}][{{ locations_map[loc] }}]">
+                    <option value="">—</option>
+                    {% for emp in employees %}
+                      <option value="{{ emp.id }}"
+                        {% if emp.full_name == val %}selected{% endif %}>
+                        {{ emp.full_name }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                {% else %}
+                  {{ val }}
+                {% endif %}
               </td>
             {% endfor %}
           </tr>
@@ -64,12 +50,18 @@
       </tbody>
     </table>
 
+    {% if is_admin %}
     <div class="button-container">
-      {% if is_admin %}
-        <button type="submit">Сохранить</button>
-        <button type="submit" formaction="/schedule/generate">Сгенерировать</button>
+      {% if can_generate_next %}
+        <button type="submit" formaction="/schedule/generate_next" class="btn-gradient">Сгенерировать</button>
+      {% endif %}
+      {% if is_preview %}
+        <button type="submit" class="btn-gradient">Опубликовать</button>
+      {% else %}
+        <button type="submit" formaction="/schedule/begin_edit" class="btn-gradient">Начать редактирование</button>
       {% endif %}
     </div>
+    {% endif %}
   </form>
 </div>
 {% endblock %}
