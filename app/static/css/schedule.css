@@ -1,5 +1,5 @@
 :root {
-  /* Палитра — светлый сине-фиолетовый */
+  /* Цвета — светлый, «плюшечный» */
   --primary: #5b7cfa;
   --primary-dark: #4566ee;
   --primary-2: #22d3ee;
@@ -7,19 +7,20 @@
   --page-bg: #f7f9fc;
   --card-bg: #ffffff;
 
-  --header-grad: linear-gradient(135deg, #2a3f66, #233856 60%);
-  --header-text: #fff;
-
   --row-alt: #f9fbff;
   --line: #e8edf4;
+  --text: #1b2430;
+
   --shadow: 0 8px 24px rgba(18, 28, 45, .06);
 }
 
 /* База */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
 body {
   font-family: Inter, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   background: var(--page-bg);
-  color: #1b2430;
+  color: var(--text);
   margin: 0;
 }
 
@@ -30,15 +31,22 @@ body {
   background: #fff;
   border-bottom: 1px solid var(--line);
 }
-
-/* Навигация */
 .nav-tabs a{
   text-decoration:none; color:#4b5563;
   margin-left:12px; font-size:14px; padding:6px 10px; border-radius:8px;
 }
 .nav-tabs a:hover{ background:#eef2f7; }
 
-/* Заголовок */
+/* Авторизация (если есть) */
+.login-container form{ display:flex; gap:6px; align-items:center; }
+.login-container input{ padding:6px; font-size:14px; }
+.login-container button{
+  padding: 8px 12px; border-radius:10px; border:0; cursor:pointer;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  color:#fff; font-weight:700;
+}
+
+/* Заголовок страницы */
 h1 { text-align:center; margin: 22px 0 14px; }
 
 /* Обёртка таблицы */
@@ -48,6 +56,7 @@ h1 { text-align:center; margin: 22px 0 14px; }
   overflow-x: auto;
 }
 
+/* Таблица */
 table{
   border-collapse: separate;
   border-spacing: 0;
@@ -69,23 +78,21 @@ th, td{
   font-size: 14px;
   line-height: 1.4;
   background: #fff;
+  white-space: nowrap;
 }
 tr:last-child td{ border-bottom: none; }
 th:last-child, td:last-child{ border-right: none; }
 
-/* Шапка таблицы — светлее и «плюшечнее» */
-th{
-  position: sticky; top: 0; z-index: 2;
-  background: var(--header-grad);
-  color: var(--header-text);
-  font-weight: 700;
-  letter-spacing: .2px;
-  box-shadow: inset 0 -1px 0 rgba(255,255,255,.08);
+/* Липкая шапка */
+thead th{
+  position: sticky; top: 0; z-index: 3;
+  background: transparent;      /* фон убираем: будут «чипы» */
+  padding: 8px 10px;
 }
 
-/* Первая колонка — закрепляем, делаем светлой */
+/* Первая колонка — закрепляем */
 td:first-child, th:first-child{
-  position: sticky; left: 0; z-index: 3;
+  position: sticky; left: 0; z-index: 4;
   background: #fff;
   color: #111827;
   font-weight: 600;
@@ -93,18 +100,25 @@ td:first-child, th:first-child{
   box-shadow: 2px 0 6px rgba(16, 24, 40, .04);
 }
 
-/* Полосатость строк и hover */
+/* Чередование строк и hover */
 tbody tr:nth-child(even){ background: var(--row-alt); }
 tbody tr:hover td{ background: #f0f5ff; }
 
-/* «Чип» для даты в шапке — работает, если обернёшь текст в <span class="date-chip"> */
-.date-chip{
-  display:inline-flex; align-items:center; gap:8px;
+/* ДАТЫ-ЧИПЫ: автоматически для всех th, кроме первой */
+thead th:not(:first-child) > .date-chip{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 6px 12px;
+  margin: 2px 0;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--primary), var(--primary-2));
-  color:#fff; font-weight:700; font-size:13px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
   box-shadow: var(--shadow);
+  min-width: 88px;
 }
 
 /* Селекты — аккуратные */
@@ -124,7 +138,7 @@ select:focus-visible{
   box-shadow: 0 0 0 3px rgba(91,124,250,.25), inset 0 0 0 1px rgba(91,124,250,.45);
 }
 
-/* Кнопки — меняем «огуречные» на сине-фиолетовые */
+/* Кнопки */
 .button-container{ text-align:center; margin: 20px; }
 button{
   background: linear-gradient(135deg, var(--primary), var(--primary-2));
@@ -138,10 +152,8 @@ button:hover{ filter: brightness(1.05); transform: translateY(-1px); }
 button:focus-visible{ outline: 2px solid var(--primary); outline-offset: 2px; }
 button:disabled{ opacity:.6; cursor:not-allowed; }
 
-/* Авторизация */
-.login-container form{ display:flex; gap:6px; }
-.login-container input{ padding:6px; font-size:14px; }
-.login-container button{
-  padding: 8px 12px; border-radius:10px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+/* Мелкий адаптив */
+@media (max-width: 720px){
+  th, td{ padding: 10px 12px; font-size:13px; }
+  thead th:not(:first-child) > .date-chip{ min-width: 76px; }
 }
