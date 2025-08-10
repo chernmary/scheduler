@@ -48,12 +48,12 @@
   {% else %}
     {% if is_admin %}
     <div class="actions">
-      <form method="post" action="/schedule/begin_edit" class="inline">
+      <form method="post" action="/api/schedule/begin_edit" class="inline">
         <input type="hidden" name="start_iso" value="{{ start_iso }}">
         <button type="submit" class="primary">Начать редактирование</button>
       </form>
       {% if can_generate_next %}
-      <form method="post" action="/schedule/generate_next" class="inline">
+      <form method="post" action="/api/schedule/generate_next" class="inline">
         <input type="hidden" name="start_iso" value="{{ start_iso }}">
         <button type="submit">Сгенерировать следующую неделю</button>
       </form>
