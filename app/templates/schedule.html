@@ -21,9 +21,11 @@
             {% endif %}
         </div>
         <div class="nav-tabs">
-            <a href="#">График</a>
-            <a href="#">Архив</a>
-            <a href="#">Сотрудники</a>
+          <a href="/schedule">График</a>
+            {% if is_admin %}
+            <a href="/admin/archive">Архив</a>
+            <a href="/admin/employees">Сотрудники</a>
+            {% endif %}
         </div>
     </div>
 
