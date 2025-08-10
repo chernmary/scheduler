@@ -15,3 +15,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def init_db():
     from app import models
     Base.metadata.create_all(bind=engine)
+    
+    
+
+def get_db():
+    """Dependency для FastAPI: отдаёт сессию и корректно закрывает её."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
