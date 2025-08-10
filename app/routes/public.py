@@ -42,11 +42,6 @@ def week_range(d: date):
     return start, end
 
 def weekly_rollover(db: Session, now_dt: datetime):
-    """
-    ВОСКРЕСЕНЬЕ >= 16:00 Europe/Berlin:
-    - переводим published текущей недели в archived
-    - удаляем draft этой же недели
-    """
     tz = ZoneInfo("Europe/Berlin")
     now = now_dt.astimezone(tz)
     if now.weekday() != 6 or now.hour < 16:
@@ -139,6 +134,7 @@ def schedule_view(request: Request, start: Optional[str] = Query(None)):
                 "readonly": not is_admin(request),
                 "is_preview": is_admin(request) and has_draft,
                 "can_generate_next": is_admin(request) and (not has_any_next),
+                "is_empty_schedule": is_admin(request) and (not has_any_current),  # 🔹 добавили флаг для кнопок
             },
         )
     finally:
@@ -146,7 +142,6 @@ def schedule_view(request: Request, start: Optional[str] = Query(None)):
 
 @router.post("/schedule/begin_edit", name="schedule_begin_edit")
 async def schedule_begin_edit(request: Request, start_iso: str = Form(...)):
-    """Начать редактирование: если есть published → копируем в draft; иначе генерируем draft."""
     if not is_admin(request):
         return RedirectResponse(url="/schedule", status_code=302)
 
@@ -165,7 +160,6 @@ async def schedule_begin_edit(request: Request, start_iso: str = Form(...)):
         ).all()
 
         if not pubs:
-            # Нет опубликованного — генерируем черновик на окно
             try:
                 generate_schedule(start_date, weeks=2, persist=True)
             except Exception:
@@ -176,7 +170,6 @@ async def schedule_begin_edit(request: Request, start_iso: str = Form(...)):
                 )
             return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
 
-        # Чистим draft и копируем published → draft
         db.query(Shift).filter(
             Shift.status == "draft",
             Shift.date >= dates[0],
