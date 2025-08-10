@@ -84,6 +84,12 @@ def schedule_view(request: Request, start: Optional[str] = Query(None)):
             start_date = week_monday(today)
 
         dates, pretty, raw = period_dates(start_date, days=14)
+        has_any_current = db.query(Shift).filter(
+            Shift.status.in_(["draft", "published"]),
+            Shift.date >= dates[0],
+            Shift.date <= dates[-1],
+        ).first() is not None
+
         locations = db.query(Location).order_by(Location.order).all()
         locations_map = {loc.name: loc.id for loc in locations}
 
