@@ -4,92 +4,76 @@
   <meta charset="UTF-8" />
   <title>График</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;margin:0;background:#f7f7f9;color:#1f2328}
-    header,footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;background:#fff;border-bottom:1px solid #e7e7ea}
-    .title{font-weight:600}
-    .actions{display:flex;gap:10px}
-    .btn{border:1px solid #d0d7de;background:#fff;border-radius:8px;padding:10px 14px;cursor:pointer}
-    .btn.primary{background:#1f6feb;border-color:#1f6feb;color:#fff}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-    .container{padding:20px}
-    .table-wrap{overflow:auto;border:1px solid #e7e7ea;border-radius:12px;background:#fff}
-    table{border-collapse:separate;border-spacing:0;width:100%;min-width:900px}
-    th,td{padding:10px 12px;border-bottom:1px solid #f0f1f3}
-    th{position:sticky;top:0;background:#fff;font-weight:600}
-    th:first-child,td:first-child{position:sticky;left:0;background:#fff;border-right:1px solid #f0f1f3}
-    .loc{white-space:nowrap}
-    select{min-width:180px;padding:8px;border:1px solid #d0d7de;border-radius:8px;background:#fff}
-    .controls{display:flex;gap:12px;justify-content:flex-end;margin-top:16px}
-    .note{font-size:12px;color:#6a737d;margin-left:auto}
-    a.link{color:#1f6feb;text-decoration:none}
-  </style>
+  <link rel="stylesheet" href="/static/css/schedule.css">
 </head>
 <body>
-  <header>
-    <div class="title">График</div>
-    <div class="actions">
-      <a class="btn" href="/admin/archive">Архив</a>
-      {% if is_admin %}
-      <form method="post" action="{{ request.url_for('logout') }}">
-        <button class="btn" type="submit">Выйти</button>
-      </form>
-      {% endif %}
-    </div>
-  </header>
 
-  <div class="container">
-    <div class="table-wrap">
-      <form id="saveForm" method="post" action="{{ request.url_for('schedule_save') }}">
-        <input type="hidden" name="start_iso" value="{{ start_iso }}">
-        <table>
-          <thead>
+  <div class="login-container">
+    <div class="nav-left">
+      <a href="/schedule">График</a>
+      <a href="/admin/archive">Архив</a>
+      <a href="/admin/employees">Сотрудники</a>
+    </div>
+    {% if is_admin %}
+    <form method="post" action="{{ request.url_for('logout') }}">
+      <button type="submit">Выйти</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <h1>График</h1>
+
+  <div class="table-wrapper">
+    <form id="saveForm" method="post" action="{{ request.url_for('schedule_save') }}">
+      <input type="hidden" name="start_iso" value="{{ start_iso }}">
+      <table class="schedule-table {% if not readonly %}editable{% endif %}">
+        <thead>
+          <tr>
+            <th>Локации</th>
+            {% for d in dates %}
+              <th>{{ d }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for loc_name, row in schedule.items() %}
+            {% set loc_id = locations_map[loc_name] %}
             <tr>
-              <th>Локации</th>
-              {% for d in dates %}
-                <th>{{ d }}</th>
+              <td>{{ loc_name }}</td>
+              {% for i in range(row|length) %}
+                {% set d_iso = raw_dates[i] %}
+                {% set current_name = row[i] %}
+                <td>
+                  <select name="decisions[{{ d_iso }}][{{ loc_id }}]" {% if readonly %}disabled{% endif %}>
+                    <option value="">—</option>
+                    {% for emp in employees %}
+                      <option value="{{ emp.id }}" {% if emp.full_name == current_name %}selected{% endif %}>{{ emp.full_name }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
               {% endfor %}
             </tr>
-          </thead>
-          <tbody>
-            {% for loc_name, row in schedule.items() %}
-              {% set loc_id = locations_map[loc_name] %}
-              <tr>
-                <td class="loc">{{ loc_name }}</td>
-                {% for i in range(row|length) %}
-                  {% set d_iso = raw_dates[i] %}
-                  {% set current_name = row[i] %}
-                  <td>
-                    <select name="decisions[{{ d_iso }}][{{ loc_id }}]" {% if readonly %}disabled{% endif %}>
-                      <option value="">—</option>
-                      {% for emp in employees %}
-                        <option value="{{ emp.id }}" {% if emp.full_name == current_name %}selected{% endif %}>{{ emp.full_name }}</option>
-                      {% endfor %}
-                    </select>
-                  </td>
-                {% endfor %}
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </form>
-    </div>
+          {% endfor %}
+        </tbody>
+      </table>
+    </form>
+  </div>
 
-    <div class="controls">
-      {% if not readonly %}
-        <form method="post" action="{{ request.url_for('schedule_generate') }}">
-          <button class="btn" type="submit">Сгенерировать</button>
-        </form>
-        <button class="btn primary" type="submit" form="saveForm">Сохранить</button>
-      {% else %}
-        <span class="note">Только просмотр</span>
-      {% endif %}
+  {% if not readonly %}
+  <div class="button-container">
+    <form method="post" action="{{ request.url_for('schedule_generate') }}">
+      <button type="submit">Сгенерировать</button>
+    </form>
+    <button type="submit" form="saveForm">Опубликовать</button>
+  </div>
+  {% endif %}
+
+  <div class="table-wrapper" style="background:transparent; box-shadow:none;">
+    <div style="display:flex; gap:20px; align-items:center; justify-content:space-between; color:#6b7280;">
+      <div>Период: {{ raw_dates[0] }} — {{ raw_dates[-1] }}</div>
+      <div>Опубликованный график видно всем. Черновик виден только администратору.</div>
     </div>
   </div>
 
-  <footer>
-    <div>Период: {{ raw_dates[0] }} — {{ raw_dates[-1] }}</div>
-    <div class="note">Опубликованный график видно всем. Черновик виден только администратору.</div>
-  </footer>
 </body>
 </html>
