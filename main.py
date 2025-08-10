@@ -12,7 +12,7 @@ from app.database import init_db
 from app.seed_locations import seed_locations
 from app.seed_employees import seed_employees
 from app.seed_employee_settings import seed_employee_settings
-from app.routes import admin, public, schedule, auth, employees, archive
+from app.routes import admin, public, schedule, auth, employees, archive, ui_employees  # 🔹 добавили ui_employees
 
 LOGLEVEL = os.environ.get("LOGLEVEL", "INFO").upper()
 logging.basicConfig(
@@ -46,9 +46,11 @@ def _startup():
 def root():
     return RedirectResponse(url="/schedule", status_code=302)
 
+# 🔹 Подключение всех роутеров
 app.include_router(admin.router, prefix="/admin")
 app.include_router(public.router, prefix="/api")
 app.include_router(schedule.router)
 app.include_router(auth.router)
 app.include_router(employees.router)
 app.include_router(archive.router)
+app.include_router(ui_employees.router)  # 🔹 теперь /ui/employees откроет employees.html
