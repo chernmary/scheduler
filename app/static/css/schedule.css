@@ -1,183 +1,70 @@
+/* -------------------------------------------
+   БАЗОВЫЕ ПЕРЕМЕННЫЕ (если у вас уже есть, дубли не страшны)
+--------------------------------------------*/
 :root{
-  --bg:#f6f7fb;
+  --text:#111;
+  --muted:#666;
+  --line:#e6e6e6;
   --card:#fff;
-  --text:#1f2937;
-  --muted:#6b7280;
-  --line:#e5e7eb;
-  --primary:#4f46e5;     /* индиго */
-  --primary-600:#4338ca;
+  --primary:#3b82f6;
+  --bg:#f7f8fa;
 }
 
-* { box-sizing: border-box; }
-html,body{
-  margin:0;
-  padding:0;
-  background:var(--bg);
-  color:var(--text);
-  font:14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-}
+/* -------------------------------------------
+   БАЗОВОЕ ОФОРМЛЕНИЕ СТРАНИЦЫ И ТАБЛИЦЫ
+   (оставьте свои стили как есть; этот блок — безопасный)
+--------------------------------------------*/
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;}
+h1{font-size:22px;line-height:1.3;margin:14px auto 8px;text-align:center;font-weight:700;}
+.table-wrapper{max-width:1200px;margin:0 auto 16px;padding:0 12px;overflow:auto;}
+.schedule-table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+.schedule-table thead th{position:sticky;top:0;background:#fafafa;border-bottom:1px solid var(--line);padding:10px 12px;font-size:14px;white-space:nowrap;}
+.schedule-table td, .schedule-table th{border-right:1px solid var(--line);}
+.schedule-table td:last-child, .schedule-table th:last-child{border-right:none;}
+.schedule-table tbody td{padding:8px 10px;vertical-align:middle;}
+.schedule-table tbody tr:nth-child(odd){background:#fcfcfc;}
+.schedule-table select{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px;}
+.login-container{max-width:1200px;margin:10px auto 0;padding:0 12px;display:flex;justify-content:flex-end;gap:8px;}
+.login-container form{display:inline-flex;gap:8px;}
+.login-container input{padding:6px 10px;border:1px solid var(--line);border-radius:8px;}
+.login-container button{padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:600;cursor:pointer;}
+.button-container{max-width:1200px;margin:10px auto 20px;padding:0 12px;text-align:center;}
+.button-container button{padding:10px 14px;border:0;border-radius:12px;background:var(--primary);color:#fff;font-weight:700;cursor:pointer;box-shadow:0 6px 16px rgba(59,130,246,.25);}
+.button-container button:hover{filter:brightness(.95);}
 
-h1{
-  text-align:center;
-  margin:20px 0 14px;
-  font-size:22px;
-  font-weight:700;
-}
+/* Опционально: нежная подсветка ячеек при редактировании предпросмотра */
+.schedule-table.editable select{background:#fffbe6;border-color:#f3d98b;}
 
-/* верхняя панель / навигация */
-.login-container{
+/* -------------------------------------------
+   АДМИН-ВКЛАДКИ (ПИЛЮЛЬКИ) — ДОБАВЛЕНО
+--------------------------------------------*/
+.admin-tabs{
   display:flex;
-  align-items:center;
-  gap:10px;
-  padding:10px 14px 0;
-}
-.login-container .nav-left{
-  margin-right:auto;
-  display:flex;
-  gap:14px;
-}
-.login-container a{
-  color:var(--primary);
-  text-decoration:none;
-  font-weight:600;
-  padding:6px 10px;
-  border-radius:8px;
-  border:1px solid transparent;
-}
-.login-container a:hover{
-  background:#eef2ff;
-  border-color:#e0e7ff;
-}
-
-/* таблица */
-.table-wrapper{
-  width: 96%;
-  margin: 0 auto 20px;
-  overflow: auto;
-  background: transparent;
-}
-
-.schedule-table{
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 6px 18px rgba(0,0,0,.06);
-}
-
-/* заголовки */
-.schedule-table thead th{
-  position: sticky; top: 0; z-index: 3;
-  background: #f9fafb;
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 12.5px;
-  letter-spacing: .02em;
-  padding: 10px 12px;
-  border-bottom:1px solid var(--line);
-  white-space: nowrap;
-}
-
-/* первая колонка (локации) */
-.schedule-table th:first-child,
-.schedule-table td:first-child{
-  position: sticky; left: 0; z-index: 2;
-  background: #fbfbfc;
-  font-weight: 600;
-}
-.schedule-table td:first-child{
-  border-right:1px solid var(--line);
-}
-
-/* ячейки */
-.schedule-table td{
-  border-bottom:1px solid var(--line);
-  border-right:1px solid var(--line);
-  padding: 6px 8px;
-  min-width: 120px;
-  height: 44px;
-  vertical-align: middle;
-  white-space: nowrap;
-}
-
-/* скругления */
-.schedule-table thead th:first-child{ border-top-left-radius:10px; }
-.schedule-table thead th:last-child{ border-top-right-radius:10px; }
-.schedule-table tr:last-child td:first-child{ border-bottom-left-radius:10px; }
-.schedule-table tr:last-child td:last-child{ border-bottom-right-radius:10px; }
-
-/* зебра */
-.schedule-table tbody tr:nth-child(odd) td{
-  background: #fcfdff;
-}
-.schedule-table tbody tr:hover td{
-  background:#f5f7ff;
-}
-
-/* выходные (таблица всегда с понедельника) */
-.schedule-table thead th:nth-child(7),
-.schedule-table thead th:nth-child(8),
-.schedule-table thead th:nth-child(14),
-.schedule-table thead th:nth-child(15),
-.schedule-table tbody td:nth-child(7),
-.schedule-table tbody td:nth-child(8),
-.schedule-table tbody td:nth-child(14),
-.schedule-table tbody td:nth-child(15){
-  background:#fff9f2;
-}
-
-/* селекты (режим админа) */
-.schedule-table select{
-  width: 100%;
-  max-width: 220px;
-  padding: 7px 10px;
-  border:1px solid var(--line);
-  border-radius:8px;
-  background: #fff;
-  font-size: 13.5px;
-  outline: none;
-  box-shadow: inset 0 1px 0 rgba(0,0,0,.02);
-}
-.schedule-table select:focus{
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(79,70,229,.18);
-}
-
-/* лёгкая подложка для режима редактирования */
-.schedule-table.editable td{
-  background-image: linear-gradient(to bottom, rgba(79,70,229,.06), rgba(79,70,229,0));
-  background-clip: padding-box;
-}
-
-/* кнопки */
-.button-container{
-  text-align:center;
-  display:flex;
-  gap:12px;
+  gap:8px;
   justify-content:center;
-  margin: 16px 0 28px;
+  align-items:center;
+  margin: 6px auto 10px;
+  padding: 0 14px;
+  flex-wrap: wrap;
 }
-.button-container form{ display:inline-block; }
-
-button{
-  background: var(--primary);
-  color:#fff;
-  padding:10px 16px;
-  border:none; border-radius:8px;
-  font-weight:600;
-  cursor:pointer;
+.admin-tabs .tab{
+  display:inline-block;
+  text-decoration:none;
+  background: var(--card);
+  color: var(--muted);
+  border:1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 600;
   transition: .15s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,.04);
 }
-button:hover{ background: var(--primary-600); }
-button:disabled{ opacity:.6; cursor:not-allowed; }
-
-/* адаптив */
-@media (max-width: 1100px){
-  .schedule-table td{ min-width: 100px; }
+.admin-tabs .tab:hover{
+  color: var(--text);
+  border-color: var(--primary);
 }
-@media (max-width: 768px){
-  .table-wrapper{ width: 100%; }
-  .login-container{ padding:10px 10px 0; }
+.admin-tabs .tab--active{
+  background: var(--primary);
+  border-color: var(--primary);
+  color:#fff;
 }
