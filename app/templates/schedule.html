@@ -41,7 +41,8 @@
                                 <form method="post" action="/schedule/update">
                                     <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
                                     <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
-                                    <select name="employee_id" onchange="this.form.submit()">
+                                                                            <input type="hidden" name="start_iso" value="{{ start_iso }}">
+                                         <select name="employee_id" onchange="this.form.submit()">
                                         <option value="">-- пусто --</option>
                                         {% for emp in employees %}
                                             <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
@@ -63,7 +64,19 @@
 
     {% if is_admin %}
     <div class="button-container">
+                {% if is_preview %}
+        <form method="post" action="/schedule/save">
+            <input type="hidden" name="start_iso" value="{{ start_iso }}">
+            <button type="submit">Опубликовать</button>
+        </form>
+        {% else %}
+        <form method="post" action="/schedule/begin_edit">
+            <input type="hidden" name="start_iso" value="{{ start_iso }}">
+            <button type="submit">Начать редактирование</button>
+        </form>
+        {% endif %}
         <form method="post" action="/schedule/generate">
+            <input type="hidden" name="start_iso" value="{{ start_iso }}">
             <button type="submit">Сгенерировать график</button>
         </form>
     </div>
