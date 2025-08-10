@@ -40,9 +40,20 @@ def violates_pair_zone(emp_name: str, zone: str, by_zone_today: Dict[str, Set[st
     return any(o in by_zone_today.get(zone, set()) for o in others)
 
 def load_data(session: Session):
-    employees: List[Employee] = (
-        session.query(Employee).filter(Employee.is_active == True).order_by(Employee.full_name).all()
-    )
+    # Гибко фильтруем сотрудников: без падений, если полей нет
+    q = session.query(Employee)
+    # активность
+    if hasattr(Employee, "is_active"):
+        q = q.filter(getattr(Employee, "is_active") == True)
+    if hasattr(Employee, "is_deleted"):
+        q = q.filter(getattr(Employee, "is_deleted") == False)
+    # исключаем хелперов из автогенерации (если есть поле/роль)
+    if hasattr(Employee, "role"):
+        q = q.filter(getattr(Employee, "role") != "helper")
+    elif hasattr(Employee, "is_helper"):
+        q = q.filter(getattr(Employee, "is_helper") == False)
+
+    employees: List[Employee] = q.order_by(Employee.full_name).all()
     locations: List[Location] = session.query(Location).order_by(Location.order).all()
     settings = session.query(EmployeeSetting).all()
 
