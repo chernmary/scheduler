@@ -43,14 +43,11 @@ def violates_pair_zone(emp_name: str, zone: str, by_zone_today: Dict[str, Set[st
 
 
 def load_data(session: Session):
-    # Гибко фильтруем сотрудников: без падений, если полей нет
     q = session.query(Employee)
-    # активность
     if hasattr(Employee, "is_active"):
         q = q.filter(getattr(Employee, "is_active") == True)
     if hasattr(Employee, "is_deleted"):
         q = q.filter(getattr(Employee, "is_deleted") == False)
-    # исключаем хелперов из автогенерации (если есть поле/роль)
     if hasattr(Employee, "role"):
         q = q.filter(getattr(Employee, "role") != "helper")
     elif hasattr(Employee, "is_helper"):
@@ -81,6 +78,52 @@ def load_data(session: Session):
     return employees, settings_map, locations, weekend_only_emp
 
 
+def balance_schedule(session: Session, employees: List[Employee], locations: List[Location], start: date, weeks: int):
+    """Перераспределяем смены, чтобы у всех было минимум 2 за неделю."""
+    for week_idx in range(weeks):
+        week_start = start + timedelta(days=week_idx * 7)
+        week_end = week_start + timedelta(days=6)
+
+        shifts = session.query(Shift).filter(
+            Shift.date >= week_start,
+            Shift.date <= week_end,
+            Shift.status == "draft"
+        ).all()
+
+        shifts_by_emp = defaultdict(list)
+        for s in shifts:
+            shifts_by_emp[s.employee_id].append(s)
+
+        low = [emp for emp in employees if len(shifts_by_emp.get(emp.id, [])) < 2]
+        high = [emp for emp in employees if len(shifts_by_emp.get(emp.id, [])) > 4]
+
+        if not low or not high:
+            continue
+
+        for poor in low:
+            for rich in high:
+                if len(shifts_by_emp.get(poor.id, [])) >= 2:
+                    break
+                for s in list(shifts_by_emp.get(rich.id, [])):
+                    # Проверка: может ли poor работать на этой локации
+                    loc = next((l for l in locations if l.id == s.location_id), None)
+                    if not loc:
+                        continue
+                    es = session.query(EmployeeSetting).filter_by(employee_id=poor.id, location_id=loc.id).first()
+                    if es and not es.is_allowed:
+                        continue
+                    # Заменяем rich на poor
+                    s.employee_id = poor.id
+                    shifts_by_emp[rich.id].remove(s)
+                    shifts_by_emp[poor.id].append(s)
+                    break
+
+        logger.info("Balance done for week %d: low=%s, high=%s",
+                    week_idx + 1,
+                    [e.full_name for e in low],
+                    [e.full_name for e in high])
+
+
 def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
     logger.info("generate_schedule: start=%s weeks=%s persist=%s", start.isoformat(), weeks, persist)
     init_db()
@@ -90,23 +133,21 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
 
         total_days = weeks * 7
         dates = [start + timedelta(days=i) for i in range(total_days)]
-        logger.info("Dates range: %s .. %s (%d days)", dates[0].isoformat(), dates[-1].isoformat(), len(dates))
 
         if persist:
-            deleted = session.query(Shift).filter(
+            session.query(Shift).filter(
                 Shift.date >= dates[0],
                 Shift.date <= dates[-1],
                 Shift.status == "draft",
             ).delete(synchronize_session=False)
             session.commit()
-            logger.info("Old drafts deleted: %s", deleted)
 
-        week_count: Dict[Tuple[int, int], int] = defaultdict(int)
-        total_2w: Dict[int, int] = defaultdict(int)
-        prev_streak: Dict[int, int] = defaultdict(int)
-        used_loc_week: Dict[Tuple[int, int], Set[int]] = defaultdict(set)
-        special_done_target: Dict[str, Set[int]] = defaultdict(set)
-        special_done_master: Dict[str, Set[int]] = defaultdict(set)
+        week_count = defaultdict(int)
+        total_2w = defaultdict(int)
+        prev_streak = defaultdict(int)
+        used_loc_week = defaultdict(set)
+        special_done_target = defaultdict(set)
+        special_done_master = defaultdict(set)
 
         total_created = 0
 
@@ -118,21 +159,21 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                 week_idx = (day - start).days // 7
                 weekday = day.weekday()
 
-                assigned_today_ids: Set[int] = set()
-                assigned_by_zone_today: Dict[str, Set[str]] = defaultdict(set)
+                assigned_today_ids = set()
+                assigned_by_zone_today = defaultdict(set)
 
                 for loc in locations:
                     if loc.name in WEEKEND_ONLY_LOCATIONS and weekday not in (5, 6):
                         continue
 
                     zone = loc.zone
-                    chosen_emp: Optional[Employee] = None
+                    chosen_emp = None
 
                     for preferred_pass in (True, False):
                         if chosen_emp is not None:
                             break
 
-                        pool: List[Tuple[Employee, Optional[EmployeeSetting], int, int]] = []
+                        pool = []
                         for emp in employees:
                             es = settings_map.get((emp.id, loc.id))
                             if not can_work_setting(es, preferred_only=preferred_pass):
@@ -239,14 +280,14 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                         total_2w[chosen_emp.id] += 1
                         used_loc_week[(chosen_emp.id, week_idx)].add(loc.id)
 
-                new_streak: Dict[int, int] = defaultdict(int)
+                new_streak = defaultdict(int)
                 for e in employees:
                     new_streak[e.id] = (prev_streak[e.id] + 1) if (e.id in assigned_today_ids) else 0
                 prev_streak = new_streak
 
         if persist:
+            balance_schedule(session, employees, locations, start, weeks)
             session.commit()
-            logger.info("Generation finished, created draft shifts: %d", total_created)
             return None, dates
         else:
             return [], dates
