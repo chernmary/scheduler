@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # ID этой миграции
 revision = "0003_add_status_to_shifts"
-# Ссылаемся на твою предыдущую
+# Ссылаемся на предыдущую
 down_revision = "0002_align_to_models"
 branch_labels = None
 depends_on = None
