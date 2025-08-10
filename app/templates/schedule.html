@@ -13,7 +13,6 @@
     <a href="/schedule" class="nav-link">График</a>
     <a href="/admin/archive" class="nav-link">Архив</a>
     <a href="/ui/employees" class="nav-link">Сотрудники</a>
-
   </nav>
 
   <div class="auth">
@@ -82,18 +81,9 @@
 
     {% if is_admin %}
       <div class="button-container">
-        {% if is_empty_schedule %}
-          <button class="btn-gradient" formaction="/schedule/begin_edit" formmethod="post">Сгенерировать</button>
-          <button class="btn-gradient" formaction="/schedule/save" formmethod="post">Опубликовать</button>
-        {% else %}
-          {% if can_generate_next %}
-            <button class="btn-gradient" formaction="/schedule/generate_next" formmethod="post">Сгенерировать</button>
-          {% endif %}
-          {% if is_preview %}
-            <button class="btn-gradient" formaction="/schedule/save" formmethod="post">Опубликовать</button>
-          {% else %}
-            <button class="btn-gradient" formaction="/schedule/begin_edit" formmethod="post">Начать редактирование</button>
-          {% endif %}        {% endif %}
+        <button class="btn-gradient" formaction="/schedule/begin_edit" formmethod="post">Начать редактирование</button>
+        <button class="btn-gradient" formaction="/schedule/generate_next" formmethod="post">Сгенерировать</button>
+        <button class="btn-gradient" formaction="/schedule/save" formmethod="post">Опубликовать</button>
       </div>
     {% endif %}
   </form>
