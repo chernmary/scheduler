@@ -8,6 +8,28 @@
 </head>
 <body>
 
+<header class="topbar">
+  <nav class="nav-tabs">
+    <a href="/schedule" class="nav-link">График</a>
+    <a href="/admin/archive" class="nav-link">Архив</a>
+    <a href="/employees" class="nav-link">Сотрудники</a>
+  </nav>
+
+  <div class="auth">
+    {% if is_admin %}
+      <form action="/logout" method="post">
+        <button type="submit" class="btn-gradient small">Выйти</button>
+      </form>
+    {% else %}
+      <form action="/login" method="post" class="login-form">
+        <input type="text" name="username" placeholder="Логин" />
+        <input type="password" name="password" placeholder="Пароль" />
+        <button type="submit" class="btn-gradient small">Войти</button>
+      </form>
+    {% endif %}
+  </div>
+</header>
+
 <h1 class="page-title">График сотрудников</h1>
 
 <div class="table-wrapper">
