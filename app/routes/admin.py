@@ -6,9 +6,6 @@ from typing import List
 
 router = APIRouter()
 
-@router.get("/employees")
-def admin_employees():
-    return {"message": "Страница управления сотрудниками"}
 
 @router.post("/templates/save")
 def save_template(template: ScheduleTemplate):
