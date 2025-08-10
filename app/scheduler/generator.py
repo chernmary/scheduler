@@ -1,3 +1,4 @@
+import logging
 import random
 from collections import defaultdict
 from datetime import date, timedelta
@@ -8,40 +9,31 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal, init_db
 from app.models import Employee, EmployeeSetting, Location, Shift
 
-# --- Константы и правила ---
+logger = logging.getLogger("scheduler")
 
-# Локации, которые работают только по выходным (сб/вс)
 WEEKEND_ONLY_LOCATIONS: Set[str] = {"Луномосик", "Авиапарк", "Москвариум 3"}
-
-# Пара, которой нельзя работать в один день в одной зоне
 CONFLICT_PAIR: Set[str] = {"Катя Стрижкина", "Аня Стаценко"}
 
-# Мягкие/жесткие лимиты
 SOFT_WEEK_TARGET = 4
 HARD_WEEK_CAP = 5
 SOFT_STREAK_TARGET = 2
 HARD_STREAK_CAP = 3
 
-# Спец-цели на выходных
 SPECIAL_TARGET_SET: Set[str] = {"Москвариум 1", "Москвариум 0", "Мультпарк"}
 SPECIAL_STAFF: Dict[str, dict] = {
     "Катя Стрижкина": {"need_target_once": True,  "need_master_once": False},
     "Настя Губарева": {"need_target_once": True,  "need_master_once": False},
     "Лиза Терехова":  {"need_target_once": True,  "need_master_once": False},
-    "Аня Стаценко":   {"need_target_once": True,  "need_master_once": True},   # + 1 выходной «Мастер классы»
-    "Алиса Бойцова":  {"forbid_weekend": {"Москвариум 0", "Москвариум 1"}},    # персональные запреты на выходных
+    "Аня Стаценко":   {"need_target_once": True,  "need_master_once": True},
+    "Алиса Бойцова":  {"forbid_weekend": {"Москвариум 0", "Москвариум 1"}},
 }
 
-# --- Вспомогательные функции ---
-
 def can_work_setting(es: Optional[EmployeeSetting], preferred_only: bool) -> bool:
-    """Фильтр по настройкам: preferred-проход — только is_preferred; иначе — любой allowed (или отсутствие записи)."""
     if preferred_only:
         return es is not None and es.is_allowed and getattr(es, "is_preferred", False)
     return es is None or es.is_allowed
 
 def violates_pair_zone(emp_name: str, zone: str, by_zone_today: Dict[str, Set[str]]) -> bool:
-    """Запрещаем одновременную работу конфликтной пары в одной зоне."""
     if emp_name not in CONFLICT_PAIR:
         return False
     others = CONFLICT_PAIR - {emp_name}
@@ -53,14 +45,10 @@ def load_data(session: Session):
         session.query(Employee).filter(Employee.is_active == True).order_by(Employee.full_name).all()
     )
     locations: List[Location] = session.query(Location).order_by(Location.order).all()
-
-    # карта настроек (employee_id, location_id) -> EmployeeSetting
     settings = session.query(EmployeeSetting).all()
-    settings_map: Dict[Tuple[int, int], EmployeeSetting] = {}
-    for s in settings:
-        settings_map[(s.employee_id, s.location_id)] = s
 
-    # вычислим список «только выходные» по allowed-локациям сотрудника
+    settings_map: Dict[Tuple[int, int], EmployeeSetting] = {(s.employee_id, s.location_id): s for s in settings}
+
     by_emp_allowed: Dict[int, List[int]] = defaultdict(list)
     for s in settings:
         if s.is_allowed:
@@ -76,16 +64,11 @@ def load_data(session: Session):
         names = {loc_by_id[i].name for i in ids if i in loc_by_id}
         weekend_only_emp[e.id] = all(n in WEEKEND_ONLY_LOCATIONS for n in names)
 
+    logger.info("Data loaded: employees=%d, locations=%d, settings=%d", len(employees), len(locations), len(settings))
     return employees, settings_map, locations, weekend_only_emp
 
-# --- Генерация черновика ---
-
 def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
-    """
-    Генерирует DRAFT-график на 'weeks' недель, начиная с 'start' (обычно ближайший понедельник).
-    Внутри каждой недели порядок дней: сначала выходные (сб/вс), затем будни.
-    Возвращает (None, dates) при persist=True.
-    """
+    logger.info("generate_schedule: start=%s weeks=%s persist=%s", start.isoformat(), weeks, persist)
     init_db()
     session = SessionLocal()
     try:
@@ -94,28 +77,29 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
 
         total_days = weeks * 7
         dates = [start + timedelta(days=i) for i in range(total_days)]
+        logger.info("Dates range: %s .. %s (%d days)", dates[0].isoformat(), dates[-1].isoformat(), len(dates))
 
-        # очистка старых черновиков за диапазон
-        session.query(Shift).filter(
+        deleted = session.query(Shift).filter(
             Shift.date >= dates[0],
             Shift.date <= dates[-1],
             Shift.status == "draft",
         ).delete(synchronize_session=False)
         session.commit()
+        logger.info("Old drafts deleted: %s", deleted)
 
-        # счётчики и состояния
-        week_count: Dict[Tuple[int, int], int] = defaultdict(int)   # (emp_id, week_idx) -> кол-во смен в неделе
-        total_2w: Dict[int, int] = defaultdict(int)                 # emp_id -> кол-во смен за период
-        prev_streak: Dict[int, int] = defaultdict(int)              # emp_id -> серия подряд дней
-        used_loc_week: Dict[Tuple[int, int], Set[int]] = defaultdict(set)  # (emp_id, week_idx) -> уже работал на loc_id
-        special_done_target: Dict[str, Set[int]] = defaultdict(set) # name -> {week_idx}
-        special_done_master: Dict[str, Set[int]] = defaultdict(set) # name -> {week_idx}
+        week_count: Dict[Tuple[int, int], int] = defaultdict(int)
+        total_2w: Dict[int, int] = defaultdict(int)
+        prev_streak: Dict[int, int] = defaultdict(int)
+        used_loc_week: Dict[Tuple[int, int], Set[int]] = defaultdict(set)
+        special_done_target: Dict[str, Set[int]] = defaultdict(set)
+        special_done_master: Dict[str, Set[int]] = defaultdict(set)
 
-        # обход по неделям
+        total_created = 0
+
         for wstart in range(0, total_days, 7):
             week_dates = dates[wstart:wstart + 7]
-            # сначала выходные, потом будни
             sorted_week_dates = sorted(week_dates, key=lambda d: 0 if d.weekday() in (5, 6) else 1)
+            logger.info("Week #%d: %s .. %s", wstart // 7, sorted_week_dates[0].isoformat(), sorted_week_dates[-1].isoformat())
 
             for day in sorted_week_dates:
                 week_idx = (day - start).days // 7
@@ -124,44 +108,35 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                 assigned_today_ids: Set[int] = set()
                 assigned_by_zone_today: Dict[str, Set[str]] = defaultdict(set)
 
-                # по всем локациям в этот день — максимум 1 назначение на локацию
+                logger.info(" Day %s (wd=%d)", day.isoformat(), weekday)
+
                 for loc in locations:
-                    # локация работает только по выходным
                     if loc.name in WEEKEND_ONLY_LOCATIONS and weekday not in (5, 6):
                         continue
 
                     zone = loc.zone
                     chosen_emp: Optional[Employee] = None
 
-                    # два прохода: preferred -> allowed
                     for preferred_pass in (True, False):
                         if chosen_emp is not None:
                             break
 
-                        # собираем пул кандидатов
                         pool: List[Tuple[Employee, Optional[EmployeeSetting], int, int]] = []
                         for emp in employees:
                             es = settings_map.get((emp.id, loc.id))
                             if not can_work_setting(es, preferred_only=preferred_pass):
                                 continue
-
-                            # запрет строго «только выходные» — не ставим человека в будни
                             if weekday not in (5, 6) and weekend_only_emp.get(emp.id, False):
                                 continue
-
-                            # персональные запреты на выходных
                             if weekday in (5, 6):
                                 rules = SPECIAL_STAFF.get(emp.full_name, {})
                                 if loc.name in rules.get("forbid_weekend", set()):
                                     continue
-
-                            # ограничения на день/зону
                             if emp.id in assigned_today_ids:
                                 continue
                             if violates_pair_zone(emp.full_name, zone, assigned_by_zone_today):
                                 continue
 
-                            # недельные/серийные лимиты
                             w = week_count[(emp.id, week_idx)]
                             s_now = prev_streak[emp.id]
                             if w >= HARD_WEEK_CAP or s_now >= HARD_STREAK_CAP:
@@ -169,12 +144,11 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
 
                             pool.append((emp, es, w, s_now))
 
+                        logger.debug("  Loc '%s' pass=%s pool=%d", loc.name, "preferred" if preferred_pass else "allowed", len(pool))
                         if not pool:
                             continue
 
-                        # приоритеты только на выходных
                         if weekday in (5, 6):
-                            # 1) «Мастер классы» — 1 раз в неделю для Ани Стаценко
                             if (loc.name == "Мастер классы"
                                 and SPECIAL_STAFF.get("Аня Стаценко", {}).get("need_master_once")
                                 and week_idx not in special_done_master["Аня Стаценко"]):
@@ -182,8 +156,8 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                                 if cand:
                                     chosen_emp = cand
                                     special_done_master["Аня Стаценко"].add(week_idx)
+                                    logger.info("   Priority: 'Мастер классы' -> %s", chosen_emp.full_name)
 
-                            # 2) Target-точки — по 1 выходному в неделю для отмеченных
                             if chosen_emp is None and loc.name in SPECIAL_TARGET_SET:
                                 for name, rules in SPECIAL_STAFF.items():
                                     if not rules.get("need_target_once"):
@@ -194,13 +168,12 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                                     if cand:
                                         chosen_emp = cand
                                         special_done_target[name].add(week_idx)
+                                        logger.info("   Priority: target '%s' -> %s", loc.name, chosen_emp.full_name)
                                         break
 
-                        # обычный скоринг, если приоритет не выбрал
                         if chosen_emp is None:
                             def soft_ok(item) -> bool:
                                 emp, es, w, s_now = item
-                                # «только выходные» дополнительно фильтруем (подстраховка)
                                 if weekday not in (5, 6) and weekend_only_emp.get(emp.id, False):
                                     return False
                                 return (w < SOFT_WEEK_TARGET) and (s_now < SOFT_STREAK_TARGET)
@@ -212,28 +185,22 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                             def score(item) -> int:
                                 emp, es, w, s_now = item
                                 pen = 0
-                                # бонус за предпочитаемую локацию
                                 if es and getattr(es, "is_preferred", False):
                                     pen -= 40
-                                # стремимся добрать до мягкой цели
                                 if w < SOFT_WEEK_TARGET:
                                     pen -= (SOFT_WEEK_TARGET - w) * 25
                                 if w >= SOFT_WEEK_TARGET:
                                     pen += (w - SOFT_WEEK_TARGET + 1) * 30
                                 if s_now >= SOFT_STREAK_TARGET:
                                     pen += (s_now - SOFT_STREAK_TARGET + 1) * 35
-                                # не повторяем одну и ту же локацию в рамках недели
                                 if loc.id in used_loc_week[(emp.id, week_idx)]:
                                     pen += 50
-                                # выравнивание общего баланса за 2 недели
                                 pen += total_2w[emp.id]
-                                # лёгкая рандомизация
                                 pen += random.randint(0, 9)
                                 return pen
 
                             chosen_emp = min(use_pool, key=score)[0]
 
-                    # фиксируем назначение (ровно одно на локацию за день)
                     if chosen_emp is not None:
                         if persist:
                             session.add(Shift(
@@ -247,20 +214,28 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                         week_count[(chosen_emp.id, week_idx)] += 1
                         total_2w[chosen_emp.id] += 1
                         used_loc_week[(chosen_emp.id, week_idx)].add(loc.id)
+                        total_created += 1
+                        logger.debug("   Assigned: %s -> %s", chosen_emp.full_name, loc.name)
+                    else:
+                        logger.debug("   Skipped: no candidate for %s", loc.name)
 
-                # конец дня — обновляем серии подряд
                 new_streak: Dict[int, int] = defaultdict(int)
                 for e in employees:
                     new_streak[e.id] = (prev_streak[e.id] + 1) if (e.id in assigned_today_ids) else 0
                 prev_streak = new_streak
+                logger.debug("  Day end: assigned=%d", len(assigned_today_ids))
 
         if persist:
             session.commit()
+            logger.info("Generation finished, created draft shifts: %d", total_created)
             return None, dates
         else:
-            # можно вернуть предпросмотр без записи в БД
-            preview = []  # заполни при необходимости
+            preview = []
+            logger.info("Preview finished")
             return preview, dates
 
+    except Exception:
+        logger.exception("generate_schedule failed")
+        raise
     finally:
         session.close()
