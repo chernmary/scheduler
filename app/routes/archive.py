@@ -1,7 +1,7 @@
 from datetime import date, timedelta, datetime
 from collections import defaultdict
 
-from fastapi import APIRouter, Request, Query
+from fastapi import APIRouter, Request, Path
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -40,7 +40,7 @@ def archive_list(request: Request):
         db.close()
 
 @router.get("/admin/archive/{week_start}", response_class=HTMLResponse)
-def archive_week(request: Request, week_start: str = Query(...)):
+def archive_week(request: Request, week_start: str = Path(...)):
     db: Session = SessionLocal()
     try:
         start_date = datetime.fromisoformat(week_start).date()
