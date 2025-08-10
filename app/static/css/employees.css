@@ -1,101 +1,114 @@
 :root{
-  --bg:#f8fafc;
-  --card:#ffffff;
-  --text:#0f172a;
-  --muted:#64748b;
-  --line:#e2e8f0;
-  --accent:#2563eb;
-  --accent-ghost: rgba(37,99,235,.08);
-  --radius:14px;
-  --shadow:0 10px 30px rgba(2,6,23,.06);
+  --bg:#f7f9fc;
+  --card:#fff;
+  --line:#e8edf4;
+  --text:#1b2430;
+
+  --pink-weak:#fff5fa;   /* выходные ячейки */
+  --pink-weak2:#ffe6f0;  /* выходные шапка */
+
+  --grad1:#4facfe;       /* сине-голубой градиент */
+  --grad2:#00f2fe;
+
+  --shadow:0 8px 24px rgba(18,28,45,.06);
 }
 
 *{box-sizing:border-box}
-
 body{
   margin:0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   background:var(--bg);
   color:var(--text);
+  font:16px/1.45 Inter, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
-.container{
-  max-width:1100px;
-  margin:48px auto;
-  padding:0 20px;
+/* шапка с навигацией и логином */
+.topbar{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 16px; background:#fff; border-bottom:1px solid var(--line);
+}
+.nav-tabs{ display:flex; gap:8px; }
+.nav-link{
+  display:inline-block; padding:8px 10px; border-radius:10px;
+  text-decoration:none; color:#374151;
+}
+.nav-link:hover{ background:#eef2f7; }
+.login-form{ display:flex; gap:8px; align-items:center; }
+.login-form input{
+  padding:6px 8px; border:1px solid var(--line); border-radius:8px; font-size:14px;
+}
+.auth form{ margin:0; }
+
+.page-title{
+  text-align:center; margin:18px 0 12px; font-size:22px; font-weight:700;
 }
 
-h1{
-  font-size:28px;
-  margin:0 0 20px;
-  font-weight:700;
+.table-wrapper{
+  width:96%; margin:0 auto 22px; overflow-x:auto;
 }
 
-.tabs{
-  display:flex;
-  gap:8px;
-  background:var(--card);
-  padding:8px;
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  border:1px solid var(--line);
+/* таблица */
+.schedule-table{
+  width:100%; min-width:860px;
+  border-collapse:separate; border-spacing:0;
+  background:var(--card); border:1px solid var(--line);
+  border-radius:14px; overflow:hidden; box-shadow:var(--shadow);
 }
-
-.tab{
-  appearance:none;
-  border:none;
-  background:transparent;
-  padding:10px 14px;
-  border-radius:10px;
-  cursor:pointer;
-  color:var(--muted);
-  font-weight:600;
-}
-
-.tab.active{
-  background:var(--accent-ghost);
-  color:var(--accent);
-}
-
-.tab-panel{
-  margin-top:16px;
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:0;
-}
-
-.hidden{ display:none; }
-
-.table-wrap{
-  width:100%;
-  overflow:auto;
-}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  min-width:760px;
-}
-
-thead th{
-  text-align:left;
-  font-size:13px;
-  color:var(--muted);
-  font-weight:700;
-  letter-spacing:.02em;
-  padding:16px 16px;
+.schedule-table th, .schedule-table td{
+  border-right:1px solid var(--line);
   border-bottom:1px solid var(--line);
-  background: #fcfdff;
+  padding:12px 14px; text-align:center; font-size:14px; background:#fff; white-space:nowrap;
+}
+.schedule-table tr:last-child td{border-bottom:none}
+.schedule-table th:last-child, .schedule-table td:last-child{border-right:none}
+
+/* липкая шапка и первая колонка */
+.schedule-table thead th{ position:sticky; top:0; z-index:3; background:#fff; }
+.location-col, .schedule-table td:first-child{
+  position:sticky; left:0; z-index:4; background:#fff; font-weight:600;
+  text-align:left; padding-left:12px; box-shadow:2px 0 6px rgba(16,24,40,.04);
 }
 
-tbody td{
-  padding:14px 16px;
-  border-bottom:1px solid var(--line);
-  vertical-align:top;
+/* чередование и hover */
+.schedule-table tbody tr:nth-child(even){ background:#f9fbff; }
+.schedule-table tbody tr:hover td{ background:#f0f5ff; }
+
+/* даты-чипы */
+.date-header{ background:#f0f8ff; }
+.date-header .date-chip{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:6px 12px; border-radius:999px;
+  background:linear-gradient(135deg, var(--grad1), var(--grad2));
+  color:#fff; font-weight:700; font-size:13px; box-shadow:var(--shadow);
 }
 
-tbody tr:hover{
-  background:#fafcff;
+/* выходные — нежно розовые */
+.date-header.weekend{ background:var(--pink-weak2); }
+.schedule-table td.weekend{ background:var(--pink-weak); }
+
+/* селекты */
+select{
+  width:100%; padding:8px 10px; border-radius:10px;
+  border:1px solid var(--line); background:#fff; font-size:13px;
+  transition:box-shadow .15s ease,border-color .15s ease,background .2s ease;
+}
+select:hover{ background:#fafcff; }
+select:focus-visible{
+  outline:0; border-color:transparent;
+  box-shadow:0 0 0 3px rgba(79,172,254,.25), inset 0 0 0 1px rgba(79,172,254,.45);
+}
+
+/* кнопки — градиент */
+.button-container{ text-align:center; margin-top:18px; }
+.btn-gradient{
+  background:linear-gradient(135deg, var(--grad1), var(--grad2));
+  color:#fff; border:0; padding:10px 18px; border-radius:12px;
+  cursor:pointer; font-weight:700; font-size:14px; box-shadow:var(--shadow);
+  transition:transform .08s ease, filter .15s ease; margin:0 8px;
+}
+.btn-gradient.small{ padding:8px 12px; border-radius:10px; font-weight:600; }
+.btn-gradient:hover{ filter:brightness(1.05); transform:translateY(-1px); }
+.btn-gradient:disabled{ opacity:.6; cursor:not-allowed; }
+
+@media (max-width: 720px){
+  .schedule-table th, .schedule-table td{ padding:10px 12px; font-size:13px; }
 }
