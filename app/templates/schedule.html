@@ -81,9 +81,9 @@
 
     {% if is_admin %}
       <div class="button-container">
-        <button class="btn-gradient" formaction="/schedule/begin_edit" formmethod="post">Начать редактирование</button>
-        <button class="btn-gradient" formaction="/schedule/generate_next" formmethod="post">Сгенерировать</button>
-        <button class="btn-gradient" formaction="/schedule/save" formmethod="post">Опубликовать</button>
+        <button class="btn-gradient" formaction="/api/schedule/begin_edit" formmethod="post">Начать редактирование</button>
+        <button class="btn-gradient" formaction="/api/schedule/generate_next" formmethod="post">Сгенерировать</button>
+        <button class="btn-gradient" formaction="/api/schedule/save" formmethod="post">Опубликовать</button>
       </div>
     {% endif %}
   </form>
