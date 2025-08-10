@@ -1,4 +1,4 @@
-const API_BASE = '/admin/employees';
+const API_BASE = '/employees';
 
 const tabMain = document.getElementById('tab-main');
 const tabHelpers = document.getElementById('tab-helpers');
