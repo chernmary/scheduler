@@ -66,20 +66,9 @@
     </div>
 
     {% if is_admin %}
-    {% if is_preview %}
-        <form method="post" action="/schedule/save">
-            <input type="hidden" name="start_iso" value="{{ start_iso }}">
-            <button type="submit">Сохранить и опубликовать</button>
-        </form>
-        {% else %}
-        <form method="post" action="/schedule/begin_edit">
-            <input type="hidden" name="start_iso" value="{{ start_iso }}">
-            <button type="submit">Начать редактирование</button>
-        </form>
-        {% endif %}
+    
     <div class="button-container">
-        <input type="hidden" name="start_iso" value="{{ start_iso }}">
-                {% if is_preview %}
+        {% if is_preview %}
         <form method="post" action="/schedule/save">
             <input type="hidden" name="start_iso" value="{{ start_iso }}">
             <button type="submit">Опубликовать</button>
