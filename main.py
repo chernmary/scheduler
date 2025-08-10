@@ -12,9 +12,8 @@ from app.database import init_db
 from app.seed_locations import seed_locations
 from app.seed_employees import seed_employees
 from app.seed_employee_settings import seed_employee_settings
-from app.routes import admin, public, schedule, auth, employees
+from app.routes import admin, public, schedule, auth, employees, archive
 
-# Logging
 LOGLEVEL = os.environ.get("LOGLEVEL", "INFO").upper()
 logging.basicConfig(
     level=getattr(logging, LOGLEVEL, logging.INFO),
@@ -52,3 +51,4 @@ app.include_router(public.router, prefix="/api")
 app.include_router(schedule.router)
 app.include_router(auth.router)
 app.include_router(employees.router)
+app.include_router(archive.router)
