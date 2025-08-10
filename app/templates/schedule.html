@@ -1,87 +1,119 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <title>График</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="/static/css/schedule.css">
+    <meta charset="UTF-8">
+    <title>График сотрудников</title>
+    <link rel="stylesheet" href="/static/css/schedule.css">
 </head>
 <body>
 
-  <!-- Верхняя панель -->
-  <div class="login-container">
-    <div class="nav-left">
-      <a href="/schedule">График</a>
-      <a href="/admin/archive">Архив</a>
-      <a href="/admin/employees">Сотрудники</a>
-    </div>
     {% if is_admin %}
-    <form method="post" action="{{ request.url_for('logout') }}">
-      <button type="submit">Выйти</button>
-    </form>
+    <nav class="admin-tabs" role="navigation" aria-label="Админ-навигация">
+        <a class="tab tab--active" href="#">
+            График
+            <!-- заглушка: это текущая страница; ссылка не нужна -->
+        </a>
+        <a class="tab" href="#">
+            Архив
+            <!-- заглушка: заменить на URL страницы архива, например /admin/archive -->
+        </a>
+        <a class="tab" href="#">
+            Сотрудники
+            <!-- заглушка: заменить на URL страницы сотрудников, например /admin/employees -->
+        </a>
+    </nav>
     {% endif %}
-  </div>
 
-  <h1>График</h1>
-
-  <!-- Таблица -->
-  <div class="table-wrapper">
-    <form id="saveForm" method="post" action="{{ request.url_for('schedule_save') }}">
-      <input type="hidden" name="start_iso" value="{{ start_iso }}">
-      <table class="schedule-table {% if is_admin %}editable{% endif %}">
-        <thead>
-          <tr>
-            <th>Локации</th>
-            {% for d in dates %}
-              <th>{{ d }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for loc_name, row in schedule.items() %}
-            {% set loc_id = locations_map[loc_name] %}
-            <tr>
-              <td>{{ loc_name }}</td>
-              {% for i in range(row|length) %}
-                {% set d_iso = raw_dates[i] %}
-                {% set current_name = row[i] %}
-                <td>
-                  {% if is_admin %}
-                    <select name="decisions[{{ d_iso }}][{{ loc_id }}]">
-                      <option value="">—</option>
-                      {% for emp in employees %}
-                        <option value="{{ emp.id }}" {% if emp.full_name == current_name %}selected{% endif %}>{{ emp.full_name }}</option>
-                      {% endfor %}
-                    </select>
-                  {% else %}
-                    {{ current_name or "—" }}
-                  {% endif %}
-                </td>
-              {% endfor %}
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </form>
-  </div>
-
-  <!-- Кнопки -->
-  {% if is_admin %}
-  <div class="button-container">
-    <form method="post" action="{{ request.url_for('schedule_generate') }}">
-      <button type="submit">Сгенерировать</button>
-    </form>
-    <button type="submit" form="saveForm">Опубликовать</button>
-  </div>
-  {% endif %}
-
-  <!-- Подвал -->
-  <div class="table-wrapper" style="background:transparent; box-shadow:none;">
-    <div style="display:flex; gap:20px; align-items:center; justify-content:space-between; color:#6b7280;">
-      <div>Период: {{ raw_dates[0] }} — {{ raw_dates[-1] }}</div>
-      <div>Опубликованный график видно всем. Черновик виден только администратору.</div>
+    <div class="login-container">
+        {% if not is_admin %}
+        <form method="post" action="/login">
+            <input type="text" name="username" placeholder="Логин">
+            <input type="password" name="password" placeholder="Пароль">
+            <button type="submit">Войти</button>
+        </form>
+        {% else %}
+        <form method="post" action="/logout">
+            <button type="submit">Выйти</button>
+        </form>
+        {% endif %}
     </div>
-  </div>
 
+    <h1>График сотрудников</h1>
+
+    {% if is_admin and is_preview %}
+    <!-- Единая форма на весь предпросмотр -->
+    <form method="post" action="/schedule/save">
+        <input type="hidden" name="start_iso" value="{{ start_iso }}">
+    {% endif %}
+
+    <div class="table-wrapper">
+        <table class="schedule-table {% if is_admin and is_preview %}editable{% endif %}">
+            <thead>
+                <tr>
+                    <th>Локация</th>
+                    {% for date_str in dates %}
+                        <th>{{ date_str }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for loc_name, row in schedule.items() %}
+                    <tr>
+                        <td>{{ loc_name }}</td>
+                        {% for emp_name in row %}
+                            <td>
+                                {% if is_admin and not readonly and not is_preview %}
+                                <!-- Обычный режим: мгновенная запись в БД -->
+                                <form method="post" action="/schedule/update">
+                                    <input type="hidden" name="date_str" value="{{ raw_dates[loop.index0] }}">
+                                    <input type="hidden" name="location_id" value="{{ locations_map[loc_name] }}">
+                                    <select name="employee_id" onchange="this.form.submit()">
+                                        <option value="">-- пусто --</option>
+                                        {% for emp in employees %}
+                                            <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
+                                                {{ emp.full_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+
+                                {% elif is_admin and is_preview %}
+                                <!-- Предпросмотр: редактируем, но НИЧЕГО не пишем до Save -->
+                                <select name="emp_{{ raw_dates[loop.index0] }}_{{ locations_map[loc_name] }}">
+                                    <option value="">-- пусто --</option>
+                                    {% for emp in employees %}
+                                        <option value="{{ emp.id }}" {% if emp_name == emp.full_name %}selected{% endif %}>
+                                            {{ emp.full_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+
+                                {% else %}
+                                    {{ emp_name }}
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if is_admin %}
+    <div class="button-container">
+        {% if is_preview %}
+            <button type="submit">Сохранить</button>
+            </form> <!-- закрываем форму предпросмотра -->
+            <form method="get" action="/schedule" style="display:inline-block; margin-left:8px;">
+                <input type="hidden" name="start" value="{{ start_iso }}">
+                <button type="submit">Отмена</button>
+            </form>
+        {% else %}
+            <form method="post" action="/schedule/generate">
+                <button type="submit">Сгенерировать график</button>
+            </form>
+        {% endif %}
+    </div>
+    {% endif %}
 </body>
 </html>
