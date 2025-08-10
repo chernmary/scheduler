@@ -228,14 +228,7 @@ async def schedule_save(
             delete(Shift).where(
                 Shift.date >= dates[0],
                 Shift.date <= dates[-1],
-                Shift.status == "published"
-            )
-        )
-        db.execute(
-            delete(Shift).where(
-                Shift.date >= dates[0],
-                Shift.date <= dates[-1],
-                Shift.status == "draft"
+                Shift.status.in_(["published", "draft"]),
             )
         )
 
@@ -245,19 +238,26 @@ async def schedule_save(
             for loc_id in loc_ids:
                 key = f"decisions[{d_iso}][{loc_id}]"
                 val = form.get(key)
-                if val is None or val == "":
+                if not val:
                     continue
                 try:
                     emp_id = int(val)
                 except ValueError:
                     continue
-                new_published.append(Shift(date=d, location_id=loc_id, employee_id=emp_id, status="published"))
+                new_published.append(
+                    Shift(date=d, location_id=loc_id, employee_id=emp_id, status="published")
+                )
 
-        if new_published:
-            db.add_all(new_published)
-            # Синхронизируем идентичный draft
-            for s in new_published:
-                db.add(Shift(date=s.date, location_id=s.location_id, employee_id=s.employee_id, status="draft"))
+        db.add_all(new_published)
+        for s in new_published:
+            db.add(
+                Shift(
+                    date=s.date,
+                    location_id=s.location_id,
+                    employee_id=s.employee_id,
+                    status="draft",
+                )
+            )
 
         db.commit()
         return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
