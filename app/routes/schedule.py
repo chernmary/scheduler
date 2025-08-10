@@ -7,7 +7,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal, get_db
+from app.database import SessionLocal
 from app.models import Shift, Location, Employee
 from app.scheduler.generator import generate_schedule
 
@@ -34,8 +34,7 @@ def make_dates_block(start: date, days: int = 14):
 
 @router.get("/schedule", response_class=HTMLResponse)
 def schedule_view(request: Request, start: str | None = Query(None)):
-    """Показываем 14 дней с ближайшего понедельника или указанной даты."""
-    db = SessionLocal()
+    db: Session = SessionLocal()
     try:
         if start:
             try:
@@ -49,7 +48,6 @@ def schedule_view(request: Request, start: str | None = Query(None)):
         locations = db.query(Location).order_by(Location.order).all()
         locations_map = {loc.name: loc.id for loc in locations}
 
-        # Выбираем источник данных: draft или published
         if is_admin(request):
             shifts = db.query(Shift).filter(
                 Shift.status == "draft",
@@ -75,21 +73,19 @@ def schedule_view(request: Request, start: str | None = Query(None)):
                 "employees": employees,
                 "locations_map": locations_map,
                 "is_admin": is_admin(request),
-                "is_preview": False,
-                "readonly": not is_admin(request),
                 "start_iso": start_date.isoformat(),
             },
         )
     finally:
         db.close()
 
-@router.post("/schedule/generate")
+@router.post("/schedule/generate", name="schedule_generate")
 def schedule_generate(request: Request):
     if not is_admin(request):
         return RedirectResponse(url="/schedule", status_code=302)
 
     start = nearest_monday(date.today())
-    generate_schedule(start, weeks=2, persist=True)  # сохраняем в draft
+    generate_schedule(start, weeks=2, persist=True)
     return RedirectResponse(url=f"/schedule?start={start.isoformat()}", status_code=302)
 
 @router.post("/schedule/save")
@@ -108,12 +104,11 @@ async def schedule_save(
     dates, _, _ = make_dates_block(start_date, days=14)
     form = await request.form()
 
-    db = SessionLocal()
+    db: Session = SessionLocal()
     try:
         locations = db.query(Location).order_by(Location.order).all()
         loc_ids = [l.id for l in locations]
 
-        # Чистим старый draft в этом диапазоне
         db.execute(
             delete(Shift).where(
                 Shift.date >= dates[0],
@@ -122,13 +117,12 @@ async def schedule_save(
             )
         )
 
-        # Добавляем новый draft из формы
         new_objects = []
         for d in dates:
             d_iso = d.isoformat()
             for loc_id in loc_ids:
-                key = f"emp_{d_iso}_{loc_id}"
-                val = form.get(key, "")
+                key = f"decisions[{d_iso}][{loc_id}]"
+                val = form.get(key)
                 if not val:
                     continue
                 try:
