@@ -1,6 +1,7 @@
 import logging
 import traceback
 from datetime import date, timedelta, datetime
+from typing import Optional
 
 from fastapi import APIRouter, Request, Form, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -21,40 +22,77 @@ RU_WD = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"]
 def is_admin(request: Request) -> bool:
     return request.cookies.get("auth") == "admin_logged_in"
 
-def nearest_monday(today: date) -> date:
-    days = (7 - today.weekday()) % 7
-    return today + timedelta(days=days or 7)
+def next_monday(d: date) -> date:
+    offs = (7 - d.weekday()) % 7
+    return d + timedelta(days=offs or 7)
 
-def make_dates_block(start: date, days: int = 14):
-    all_days = [start + timedelta(d) for d in range(days)]
+def week_monday(d: date) -> date:
+    return d - timedelta(days=d.weekday())
+
+def period_dates(start: date, days: int = 14):
+    all_days = [start + timedelta(i) for i in range(days)]
     pretty = [d.strftime("%d.%m ") + RU_WD[d.weekday()] for d in all_days]
     raw = [d.isoformat() for d in all_days]
     return all_days, pretty, raw
 
+def maybe_archive_prev_week(db: Session, today: date):
+    cur_week_start = week_monday(today)
+    prev_week_start = cur_week_start - timedelta(days=7)
+    prev_week_end = prev_week_start + timedelta(days=6)
+    updated = db.query(Shift).filter(
+        Shift.status == "published",
+        Shift.date >= prev_week_start,
+        Shift.date <= prev_week_end,
+    ).update({"status": "archived"}, synchronize_session=False)
+    if updated:
+        db.commit()
+
+def pick_default_start(db: Session, admin: bool, today: date) -> date:
+    latest_pub = db.query(Shift).filter(Shift.status == "published").order_by(Shift.date.desc()).first()
+    if admin:
+        latest_draft = db.query(Shift).filter(Shift.status == "draft").order_by(Shift.date.desc()).first()
+        if latest_draft:
+            return week_monday(latest_draft.date)
+    if latest_pub:
+        return week_monday(latest_pub.date)
+    return week_monday(today)
+
 @router.get("/schedule", response_class=HTMLResponse)
-def schedule_view(request: Request, start: str | None = Query(None)):
+def schedule_view(request: Request, start: Optional[str] = Query(None)):
     db: Session = SessionLocal()
     try:
+        today = date.today()
+        maybe_archive_prev_week(db, today)
+
         if start:
             try:
                 start_date = datetime.fromisoformat(start).date()
             except ValueError:
-                start_date = nearest_monday(date.today())
+                start_date = pick_default_start(db, is_admin(request), today)
         else:
-            start_date = nearest_monday(date.today())
+            start_date = pick_default_start(db, is_admin(request), today)
 
-        dates, pretty, raw = make_dates_block(start_date, days=14)
+        dates, pretty, raw = period_dates(start_date, days=14)
         locations = db.query(Location).order_by(Location.order).all()
+        locations_map = {loc.name: loc.id for loc in locations}
 
         if is_admin(request):
             shifts = db.query(Shift).filter(
                 Shift.status == "draft",
-                Shift.date.between(dates[0], dates[-1])
+                Shift.date >= dates[0],
+                Shift.date <= dates[-1]
             ).all()
+            if not shifts:
+                shifts = db.query(Shift).filter(
+                    Shift.status == "published",
+                    Shift.date >= dates[0],
+                    Shift.date <= dates[-1]
+                ).all()
         else:
             shifts = db.query(Shift).filter(
                 Shift.status == "published",
-                Shift.date.between(dates[0], dates[-1])
+                Shift.date >= dates[0],
+                Shift.date <= dates[-1]
             ).all()
 
         idx = {(s.location_id, s.date): (s.employee.full_name if s.employee else "") for s in shifts}
@@ -69,8 +107,10 @@ def schedule_view(request: Request, start: str | None = Query(None)):
                 "raw_dates": raw,
                 "schedule": table,
                 "employees": employees,
+                "locations_map": locations_map,
                 "is_admin": is_admin(request),
                 "start_iso": start_date.isoformat(),
+                "readonly": not is_admin(request),
             },
         )
     finally:
@@ -81,19 +121,15 @@ def schedule_generate(request: Request):
     if not is_admin(request):
         return RedirectResponse(url="/schedule", status_code=302)
 
-    start = nearest_monday(date.today())
-    logger.info("POST /schedule/generate start=%s", start.isoformat())
+    start = next_monday(date.today())
     try:
-        err, dates = generate_schedule(start, weeks=2, persist=True)
-        logger.info("Generation OK: %s .. %s", dates[0].isoformat(), dates[-1].isoformat())
+        _, _dates = generate_schedule(start, weeks=2, persist=True)
         return RedirectResponse(url=f"/schedule?start={start.isoformat()}", status_code=302)
-    except Exception as e:
+    except Exception:
         logger.exception("Generation FAILED")
-        tb = traceback.format_exc()
-        html = f"<h2>Ошибка генерации</h2><pre>{tb}</pre>"
-        return HTMLResponse(html, status_code=500)
+        return HTMLResponse(f"<h2>Ошибка генерации</h2><pre>{traceback.format_exc()}</pre>", status_code=500)
 
-@router.post("/schedule/save")
+@router.post("/schedule/save", name="schedule_save")
 async def schedule_save(
     request: Request,
     start_iso: str = Form(...),
@@ -104,9 +140,9 @@ async def schedule_save(
     try:
         start_date = datetime.fromisoformat(start_iso).date()
     except ValueError:
-        start_date = nearest_monday(date.today())
+        start_date = week_monday(date.today())
 
-    dates, _, _ = make_dates_block(start_date, days=14)
+    dates, _, _ = period_dates(start_date, days=14)
     form = await request.form()
 
     db: Session = SessionLocal()
@@ -114,14 +150,20 @@ async def schedule_save(
         locations = db.query(Location).order_by(Location.order).all()
         loc_ids = [l.id for l in locations]
 
-        deleted = db.execute(
+        db.execute(
+            delete(Shift).where(
+                Shift.date >= dates[0],
+                Shift.date <= dates[-1],
+                Shift.status == "published"
+            )
+        )
+        db.execute(
             delete(Shift).where(
                 Shift.date >= dates[0],
                 Shift.date <= dates[-1],
                 Shift.status == "draft"
             )
-        ).rowcount
-        logger.info("Drafts deleted: %s", deleted)
+        )
 
         new_objects = []
         for d in dates:
@@ -135,13 +177,12 @@ async def schedule_save(
                     emp_id = int(val)
                 except ValueError:
                     continue
-                new_objects.append(Shift(date=d, location_id=loc_id, employee_id=emp_id, status="draft"))
+                new_objects.append(Shift(date=d, location_id=loc_id, employee_id=emp_id, status="published"))
 
         if new_objects:
             db.add_all(new_objects)
 
         db.commit()
-        logger.info("Drafts saved: %s", len(new_objects))
         return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
     finally:
         db.close()
