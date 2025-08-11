@@ -41,6 +41,14 @@ def create_employee(payload: EmployeeIn, db: Session = Depends(get_db)):
     db.refresh(obj)
     return {"id": obj.id}
 
+# 🔹 ДОБАВЛЕНО: получить одного сотрудника по id
+@router.get("/employees/{emp_id}", response_model=EmployeeOut)
+def get_employee(emp_id: int, db: Session = Depends(get_db)):
+    obj = db.query(Employee).get(emp_id)
+    if not obj:
+        raise HTTPException(status_code=404, detail="Сотрудник не найден")
+    return EmployeeOut(id=obj.id, full_name=obj.full_name, on_sick_leave=obj.on_sick_leave)
+
 @router.put("/employees/{emp_id}")
 def update_employee(emp_id: int, payload: EmployeeIn, db: Session = Depends(get_db)):
     obj = db.query(Employee).get(emp_id)
