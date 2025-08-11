@@ -231,11 +231,10 @@ async def schedule_save(request: Request, start_iso: str = Form(...)):
 
     db: Session = SessionLocal()
     try:
-        # Проверка: есть ли хоть одно поле decisions в форме
-        has_decisions = any(key.startswith("decisions[") for key in form.keys())
-
+        # 1) Если форма пустая (после генерации ничего не меняли) — переводим draft -> published
+        has_decisions = any(str(k).startswith("decisions[") for k in form.keys())
         if not has_decisions:
-            # Просто переводим все черновики в published
+            # Обновляем ВСЕ draft в окне на published
             db.query(Shift).filter(
                 Shift.date >= dates[0],
                 Shift.date <= dates[-1],
@@ -244,10 +243,11 @@ async def schedule_save(request: Request, start_iso: str = Form(...)):
             db.commit()
             return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
 
-        # Если форма с данными — работаем по старой логике
+        # 2) Если форма заполнена — пересобираем окно как published (draft НЕ создаём)
         locations = db.query(Location).order_by(Location.order).all()
         loc_ids = [l.id for l in locations]
 
+        # Сносим любые записи в окне (и draft, и published)
         db.execute(
             delete(Shift).where(
                 Shift.date >= dates[0],
@@ -272,18 +272,11 @@ async def schedule_save(request: Request, start_iso: str = Form(...)):
                     Shift(date=d, location_id=loc_id, employee_id=emp_id, status="published")
                 )
 
-        db.add_all(new_published)
-        for s in new_published:
-            db.add(
-                Shift(
-                    date=s.date,
-                    location_id=s.location_id,
-                    employee_id=s.employee_id,
-                    status="draft",
-                )
-            )
+        if new_published:
+            db.add_all(new_published)
 
         db.commit()
         return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
     finally:
         db.close()
+
