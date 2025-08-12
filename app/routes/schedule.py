@@ -4,7 +4,7 @@ from datetime import date, timedelta, datetime
 from typing import Optional
 
 from fastapi import APIRouter, Request, Form, Query
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
@@ -21,15 +21,19 @@ logger = logging.getLogger("scheduler.view")
 
 RU_WD = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"]
 
+
 def is_admin(request: Request) -> bool:
     return request.cookies.get("auth") == "admin_logged_in"
+
 
 def next_monday(d: date) -> date:
     offs = (7 - d.weekday()) % 7
     return d + timedelta(days=offs or 7)
 
+
 def week_monday(d: date) -> date:
     return d - timedelta(days=d.weekday())
+
 
 def period_dates(start: date, days: int = 14):
     all_days = [start + timedelta(i) for i in range(days)]
@@ -37,12 +41,19 @@ def period_dates(start: date, days: int = 14):
     raw = [d.isoformat() for d in all_days]
     return all_days, pretty, raw
 
+
 def week_range(d: date):
     start = week_monday(d)
     end = start + timedelta(days=6)
     return start, end
 
+
 def weekly_rollover(db: Session, now_dt: datetime):
+    """
+    ВОСКРЕСЕНЬЕ >= 16:00 Europe/Berlin:
+    - переводим published текущей недели в archived
+    - удаляем draft этой же недели
+    """
     tz = ZoneInfo("Europe/Berlin")
     now = now_dt.astimezone(tz)
     if now.weekday() != 6 or now.hour < 16:
@@ -63,6 +74,7 @@ def weekly_rollover(db: Session, now_dt: datetime):
 
     if updated:
         db.commit()
+
 
 @router.get("/schedule", response_class=HTMLResponse)
 def schedule_view(request: Request, start: Optional[str] = Query(None)):
@@ -141,6 +153,7 @@ def schedule_view(request: Request, start: Optional[str] = Query(None)):
     finally:
         db.close()
 
+
 @router.post("/schedule/begin_edit", name="schedule_begin_edit")
 async def schedule_begin_edit(request: Request, start_iso: str = Form(...)):
     if not is_admin(request):
@@ -161,6 +174,7 @@ async def schedule_begin_edit(request: Request, start_iso: str = Form(...)):
         ).all()
 
         if not pubs:
+            # Нет опубликованного — генерируем черновик на окно
             try:
                 generate_schedule(start_date, weeks=2, persist=True)
             except Exception:
@@ -171,6 +185,7 @@ async def schedule_begin_edit(request: Request, start_iso: str = Form(...)):
                 )
             return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
 
+        # Чистим draft и копируем published → draft
         db.query(Shift).filter(
             Shift.status == "draft",
             Shift.date >= dates[0],
@@ -188,6 +203,7 @@ async def schedule_begin_edit(request: Request, start_iso: str = Form(...)):
         return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
     finally:
         db.close()
+
 
 @router.post("/schedule/generate_next", name="schedule_generate_next")
 def schedule_generate_next(request: Request, start_iso: str = Form(...)):
@@ -207,17 +223,19 @@ def schedule_generate_next(request: Request, start_iso: str = Form(...)):
         logger.exception("Generation of next week FAILED")
         return HTMLResponse(f"<h2>Ошибка генерации следующей недели</h2><pre>{traceback.format_exc()}</pre>", status_code=500)
 
+
 @router.post("/schedule/save", name="schedule_save")
 async def schedule_save(request: Request, start_iso: str = Form(...)):
     """
     Публикация:
     - если форма пустая → чистим published в окне, переводим все draft -> published
     - если форма с decisions[...] → пересобираем окно как published (без создания дублей draft)
-    Любая ошибка БД возвращается в теле ответа.
+    Любая ошибка БД возвращается в теле ответа понятным текстом.
     """
     if not is_admin(request):
         return RedirectResponse(url="/schedule", status_code=302)
 
+    # разбор даты
     try:
         start_date = datetime.fromisoformat(start_iso).date()
     except ValueError:
@@ -231,7 +249,7 @@ async def schedule_save(request: Request, start_iso: str = Form(...)):
         has_decisions = any(str(k).startswith("decisions[") for k in form.keys())
 
         if not has_decisions:
-            # 1) Форма пустая: публикуем черновики, но сперва удаляем опубликованные в окне (избегаем UNIQUE)
+            # Форма пустая: публикуем черновики, но сперва удаляем опубликованные (избегаем UNIQUE (date, location_id))
             db.execute(
                 delete(Shift).where(
                     Shift.date >= dates[0],
@@ -242,16 +260,23 @@ async def schedule_save(request: Request, start_iso: str = Form(...)):
             updated = db.query(Shift).filter(
                 Shift.date >= dates[0],
                 Shift.date <= dates[-1],
-                Shift.status == "draft"
+                Shift.status == "draft",
             ).update({"status": "published"}, synchronize_session=False)
 
             db.commit()
+            if not updated:
+                # Полезный ответ, если публикация нечего не изменила
+                return PlainTextResponse(
+                    "PUBLISH: нет черновиков в выбранном окне — нечего публиковать.",
+                    status_code=400
+                )
             return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
 
-        # 2) Форма заполнена: пересобираем окно как published
+        # Форма заполнена: пересобираем окно как published
         locations = db.query(Location).order_by(Location.order).all()
         loc_ids = [l.id for l in locations]
 
+        # Сносим всё окно (и draft, и published)
         db.execute(
             delete(Shift).where(
                 Shift.date >= dates[0],
@@ -284,16 +309,17 @@ async def schedule_save(request: Request, start_iso: str = Form(...)):
 
     except IntegrityError as e:
         db.rollback()
-        # вернём ПРИЧИНУ (обычно UNIQUE (date, location_id))
-        return HTMLResponse(
-            f"<h2>Ошибка публикации (IntegrityError)</h2><pre>{str(e.orig)}</pre>",
-            status_code=500,
+        # ВСЕГДА отдаём реальную причину 500
+        return PlainTextResponse(
+            "PUBLISH_ERROR: IntegrityError\n" + str(e.orig),
+            status_code=500
         )
     except Exception:
         db.rollback()
-        return HTMLResponse(
-            f"<h2>Неизвестная ошибка публикации</h2><pre>{traceback.format_exc()}</pre>",
-            status_code=500,
+        # Полный traceback, чтобы сразу увидеть место
+        return PlainTextResponse(
+            "PUBLISH_ERROR: Unexpected\n" + traceback.format_exc(),
+            status_code=500
         )
     finally:
         db.close()
