@@ -65,5 +65,10 @@ class Shift(Base):
     employee = relationship("Employee", back_populates="shifts")
 
     __table_args__ = (
-        UniqueConstraint("date", "location_id", name="uix_date_location"),
+        UniqueConstraint(
+            "date",
+            "location_id",
+            "status",
+            name="uix_date_location_status",
+        ),
     )
