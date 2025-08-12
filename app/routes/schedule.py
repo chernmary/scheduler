@@ -61,13 +61,13 @@ def weekly_rollover(db: Session, now_dt: datetime):
     w_start, w_end = week_range(now.date())
 
     updated = db.query(Shift).filter(
-        Shift.status == "published",
+        Shift.status == Shift.STATUS_PUBLISHED,
         Shift.date >= w_start,
         Shift.date <= w_end,
     ).update({"status": "archived"}, synchronize_session=False)
 
     db.query(Shift).filter(
-        Shift.status == "draft",
+        Shift.status == Shift.STATUS_DRAFT,
         Shift.date >= w_start,
         Shift.date <= w_end,
     ).delete(synchronize_session=False)
@@ -93,7 +93,7 @@ def schedule_view(request: Request, start: Optional[str] = Query(None)):
 
         dates, pretty, raw = period_dates(start_date, days=14)
         has_any_current = db.query(Shift).filter(
-            Shift.status.in_(["draft", "published"]),
+            Shift.status.in_([Shift.STATUS_DRAFT, Shift.STATUS_PUBLISHED]),
             Shift.date >= dates[0],
             Shift.date <= dates[-1],
         ).first() is not None
@@ -102,13 +102,13 @@ def schedule_view(request: Request, start: Optional[str] = Query(None)):
         locations_map = {loc.name: loc.id for loc in locations}
 
         has_draft = db.query(Shift).filter(
-            Shift.status == "draft",
+            Shift.status == Shift.STATUS_DRAFT,
             Shift.date >= dates[0],
             Shift.date <= dates[-1],
         ).first() is not None
 
         if is_admin(request):
-            basis_status = "draft" if has_draft else "published"
+            basis_status = Shift.STATUS_DRAFT if has_draft else Shift.STATUS_PUBLISHED
             shifts = db.query(Shift).filter(
                 Shift.status == basis_status,
                 Shift.date >= dates[0],
@@ -116,7 +116,7 @@ def schedule_view(request: Request, start: Optional[str] = Query(None)):
             ).all()
         else:
             shifts = db.query(Shift).filter(
-                Shift.status == "published",
+                Shift.status == Shift.STATUS_PUBLISHED,
                 Shift.date >= dates[0],
                 Shift.date <= dates[-1],
             ).all()
@@ -130,7 +130,7 @@ def schedule_view(request: Request, start: Optional[str] = Query(None)):
         has_any_next = db.query(Shift).filter(
             Shift.date >= next_week_start,
             Shift.date <= next_week_end,
-            Shift.status.in_(["draft", "published"]),
+            Shift.status.in_([Shift.STATUS_DRAFT, Shift.STATUS_PUBLISHED]),
         ).first() is not None
 
         return templates.TemplateResponse(
@@ -168,7 +168,7 @@ async def schedule_begin_edit(request: Request, start_iso: str = Form(...)):
     db: Session = SessionLocal()
     try:
         pubs = db.query(Shift).filter(
-            Shift.status == "published",
+            Shift.status == Shift.STATUS_PUBLISHED,
             Shift.date >= dates[0],
             Shift.date <= dates[-1],
         ).all()
@@ -187,18 +187,20 @@ async def schedule_begin_edit(request: Request, start_iso: str = Form(...)):
 
         # Чистим draft и копируем published → draft
         db.query(Shift).filter(
-            Shift.status == "draft",
+            Shift.status == Shift.STATUS_DRAFT,
             Shift.date >= dates[0],
             Shift.date <= dates[-1],
         ).delete(synchronize_session=False)
 
         for s in pubs:
-            db.add(Shift(
-                date=s.date,
-                location_id=s.location_id,
-                employee_id=s.employee_id,
-                status="draft",
-            ))
+            db.add(
+                Shift(
+                    date=s.date,
+                    location_id=s.location_id,
+                    employee_id=s.employee_id,
+                    status=Shift.STATUS_DRAFT,
+                )
+            )
         db.commit()
         return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
     finally:
@@ -221,7 +223,10 @@ def schedule_generate_next(request: Request, start_iso: str = Form(...)):
         return RedirectResponse(url=f"/schedule?start={start_date.isoformat()}", status_code=302)
     except Exception:
         logger.exception("Generation of next week FAILED")
-        return HTMLResponse(f"<h2>Ошибка генерации следующей недели</h2><pre>{traceback.format_exc()}</pre>", status_code=500)
+        return HTMLResponse(
+            f"<h2>Ошибка генерации следующей недели</h2><pre>{traceback.format_exc()}</pre>",
+            status_code=500
+        )
 
 
 @router.post("/schedule/save", name="schedule_save")
@@ -254,14 +259,14 @@ async def schedule_save(request: Request, start_iso: str = Form(...)):
                 delete(Shift).where(
                     Shift.date >= dates[0],
                     Shift.date <= dates[-1],
-                    Shift.status == "published",
+                    Shift.status == Shift.STATUS_PUBLISHED,
                 )
             )
             updated = db.query(Shift).filter(
                 Shift.date >= dates[0],
                 Shift.date <= dates[-1],
-                Shift.status == "draft",
-            ).update({"status": "published"}, synchronize_session=False)
+                Shift.status == Shift.STATUS_DRAFT,
+            ).update({"status": Shift.STATUS_PUBLISHED}, synchronize_session=False)
 
             db.commit()
             if not updated:
@@ -281,7 +286,7 @@ async def schedule_save(request: Request, start_iso: str = Form(...)):
             delete(Shift).where(
                 Shift.date >= dates[0],
                 Shift.date <= dates[-1],
-                Shift.status.in_(["published", "draft"]),
+                Shift.status.in_([Shift.STATUS_PUBLISHED, Shift.STATUS_DRAFT]),
             )
         )
 
@@ -298,7 +303,12 @@ async def schedule_save(request: Request, start_iso: str = Form(...)):
                 except ValueError:
                     continue
                 new_published.append(
-                    Shift(date=d, location_id=loc_id, employee_id=emp_id, status="published")
+                    Shift(
+                        date=d,
+                        location_id=loc_id,
+                        employee_id=emp_id,
+                        status=Shift.STATUS_PUBLISHED,
+                    )
                 )
 
         if new_published:
