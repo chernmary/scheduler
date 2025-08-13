@@ -27,18 +27,36 @@ def upgrade():
                     pass
 
             # Удаляем возможные дубликаты перед созданием новой уникальности
-            op.execute(
-                """
-DELETE FROM shifts
-WHERE rowid NOT IN (
-    SELECT MIN(rowid)
-    FROM shifts
-    GROUP BY date, location_id, status
-)
-"""
-            )
+            if conn.dialect.name == "sqlite":
+                # В SQLite используем rowid
+                op.execute(
+                    """
+                    DELETE FROM shifts
+                    WHERE rowid NOT IN (
+                        SELECT MIN(rowid)
+                        FROM shifts
+                        GROUP BY date, location_id, status
+                    )
+                    """
+                )
+            else:
+                # Универсальный вариант через оконную функцию (требует PK id)
+                op.execute(
+                    """
+                    WITH ranked AS (
+                        SELECT id,
+                               ROW_NUMBER() OVER (
+                                   PARTITION BY date, location_id, status
+                                   ORDER BY id
+                               ) AS rn
+                        FROM shifts
+                    )
+                    DELETE FROM shifts
+                    WHERE id IN (SELECT id FROM ranked WHERE rn > 1)
+                    """
+                )
 
-# Создаём новую уникальность по (date, location_id, status)
+            # Создаём новую уникальность по (date, location_id, status)
             batch.create_unique_constraint(
                 "uix_date_location_status",
                 ["date", "location_id", "status"],
