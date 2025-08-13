@@ -259,10 +259,14 @@ def generate_schedule(start: date, weeks: int = 2, persist: bool = True):
                                 if loc.id in used_loc_week[(emp.id, week_idx)]:
                                     pen += 300  # штраф за повтор локации в одной неделе
                                 pen += total_2w[emp.id]
-                                pen += random.randint(0, 9)
+                                pen += random.randint(0, 99)  # расширили разброс случайной компоненты
                                 return pen
 
-                            chosen_emp = min(use_pool, key=score)[0]
+                            # выбираем минимум, но если несколько с одинаковым score — случайный из лучших
+                            scored_pool = [(score(it), it) for it in use_pool]
+                            min_score = min(s for s, _ in scored_pool)
+                            best = [it for s, it in scored_pool if s == min_score]
+                            chosen_emp = random.choice(best)[0]
 
                     if chosen_emp is not None:
                         if persist:
