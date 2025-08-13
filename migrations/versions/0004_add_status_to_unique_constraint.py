@@ -26,7 +26,19 @@ def upgrade():
                 except Exception:
                     pass
 
-            # Создаём новую уникальность по (date, location_id, status)
+            # Удаляем возможные дубликаты перед созданием новой уникальности
+            op.execute(
+                """
+DELETE FROM shifts
+WHERE rowid NOT IN (
+    SELECT MIN(rowid)
+    FROM shifts
+    GROUP BY date, location_id, status
+)
+"""
+            )
+
+# Создаём новую уникальность по (date, location_id, status)
             batch.create_unique_constraint(
                 "uix_date_location_status",
                 ["date", "location_id", "status"],
