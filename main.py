@@ -9,9 +9,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.run_migrations import run_migrations
 from app.database import init_db
-from app.seed_locations import seed_locations
-from app.seed_employees import seed_employees
-from app.seed_employee_settings import seed_employee_settings
+from app.seed_db import seed_all
 from app.routes import admin, public, schedule, auth, employees, archive, ui_employees  # 🔹 добавили ui_employees
 
 LOGLEVEL = os.environ.get("LOGLEVEL", "INFO").upper()
@@ -35,11 +33,22 @@ templates = Jinja2Templates(directory="app/templates")
 @app.on_event("startup")
 def _startup():
     logger.info("Startup: running migrations, init DB, seeding")
-    run_migrations()
-    init_db()
-    seed_locations()
-    seed_employees()
-    seed_employee_settings()
+
+    try:
+        run_migrations()
+    except Exception:
+        logger.exception("Failed to run migrations")
+
+    try:
+        init_db()
+    except Exception:
+        logger.exception("Failed to init DB")
+
+    try:
+        seed_all()
+    except Exception:
+        logger.exception("Failed to seed data")
+
     logger.info("Startup complete")
 
 @app.get("/")
